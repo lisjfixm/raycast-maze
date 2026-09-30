@@ -1,0 +1,4 @@
+# 暫存/工具輸出目錄
+.tmp-tool-results/
+*.log
+.DS_Store
