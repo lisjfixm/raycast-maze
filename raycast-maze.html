@@ -2856,6 +2856,7 @@ let autoMoveSpeed = 4.2;  // 自動移動速度（最高速）
 // 卡住檢測
 let stuckTimer = 0;       // 卡住計時（秒）
 let stuckLastX = 0, stuckLastY = 0; // 上一幀位置
+let autoStuckCount = 0;   // 連續卡住次數（≥2 時退回格中心路徑，避免再次卡牆）
 
 // --- 自動遊玩：多演算法 / 對比 / 幽靈 / 路徑光帶 ---
 let pathfindAlgo = 'astar';      // astar | bfs | dfs | greedy
@@ -5559,13 +5560,16 @@ function tryDash() {
 // 共用：8 方向鄰居展開（含斜線穿牆角檢查）
 const NEI_DX = [0, 0, -1, 1, -1, 1, -1, 1];
 const NEI_DY = [-1, 1, 0, 0, -1, -1, 1, 1];
+// 自動遊玩尋路時視鎖門為可行走（自動遊玩靠近門即自動開門，無需鑰匙）
+let pfAutoDoors = false;
 function passableNeighbor(cx, cy, d) {
+  const walk = v => isWalkable(v) || (pfAutoDoors && v === TILE_DOOR);
   const nx = cx + NEI_DX[d], ny = cy + NEI_DY[d];
   if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return -1;
-  if (!isWalkable(MAP[ny][nx])) return -1;
+  if (!walk(MAP[ny][nx])) return -1;
   if (NEI_DX[d] !== 0 && NEI_DY[d] !== 0) {
-    if (!isWalkable(MAP[cy + NEI_DY[d]][cx])) return -1;
-    if (!isWalkable(MAP[cy][cx + NEI_DX[d]])) return -1;
+    if (!walk(MAP[cy + NEI_DY[d]][cx])) return -1;
+    if (!walk(MAP[cy][cx + NEI_DX[d]])) return -1;
   }
   return ny * MAP_W + nx;
 }
@@ -5578,8 +5582,9 @@ function findPathRaw(startX, startY, endX, endY, algo) {
   const W = MAP_W, H = MAP_H, size = W * H;
   const startIdx = sy * W + sx, endIdx = ey * W + ex;
   const t0 = performance.now();
+  const walk = v => isWalkable(v) || (pfAutoDoors && v === TILE_DOOR);
   if (sx < 0 || sy < 0 || sx >= W || sy >= H) return { path: null, visited: 0, ms: 0 };
-  if (!isWalkable(mapAt(ex, ey))) return { path: null, visited: 0, ms: 0 };
+  if (!walk(mapAt(ex, ey))) return { path: null, visited: 0, ms: 0 };
   if (startIdx === endIdx) return { path: [{x: ex, y: ey}], visited: 1, ms: 0 };
 
   const parent = new Int32Array(size).fill(-1);
@@ -5667,7 +5672,7 @@ function findPathRaw(startX, startY, endX, endY, algo) {
         const nx = cx + dx, ny = cy + dy;
         if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
         const nIdx = ny * W + nx;
-        if (seen[nIdx] || !isWalkable(MAP[ny][nx])) continue;
+        if (seen[nIdx] || !walk(MAP[ny][nx])) continue;
         seen[nIdx] = 1; parent[nIdx] = cur; queue.push(nIdx);
       }
     }
@@ -5715,7 +5720,7 @@ function rebuildPathMarks() {
   }
 }
 
-// 路徑平滑：弦線優化，去掉多餘拐點
+// 路徑平滑：弦線優化，去掉多餘拐點（只允許玩家碰撞盒可整條安全通過的弦線）
 function smoothPath(path) {
   if (path.length <= 2) return path;
   const result = [path[0]];
@@ -5723,7 +5728,7 @@ function smoothPath(path) {
   while (i < path.length - 1) {
     let farthest = i + 1;
     for (let j = path.length - 1; j > i + 1; j--) {
-      if (hasLineOfSight(path[i], path[j])) { farthest = j; break; }
+      if (hasClearCorridor(path[i], path[j])) { farthest = j; break; }
     }
     result.push(path[farthest]);
     i = farthest;
@@ -5751,6 +5756,29 @@ function hasLineOfSight(p1, p2) {
   return true;
 }
 
+// 弦線走廊安全檢查：以玩家碰撞盒（半徑 r）沿整條弦線密集取樣，
+// 任何取樣點的四角觸牆即拒絕——防止平滑路徑斜切牆角造成自動遊玩卡牆
+// 取樣步長 0.04、邊距 +0.03，確保涵蓋玩家實際碰撞半徑（0.2）
+function hasClearCorridor(p1, p2) {
+  if (!hasLineOfSight(p1, p2)) return false;
+  const walk = v => isWalkable(v) || (pfAutoDoors && v === TILE_DOOR);
+  const r = player.radius + 0.03; // 略微加寬，預留移動容差
+  const x0 = p1.x + 0.5, y0 = p1.y + 0.5;
+  const x1 = p2.x + 0.5, y1 = p2.y + 0.5;
+  const dist = Math.hypot(x1 - x0, y1 - y0);
+  const steps = Math.min(Math.max(1, Math.ceil(dist / 0.04)), 20000);
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const px = x0 + (x1 - x0) * t;
+    const py = y0 + (y1 - y0) * t;
+    if (!walk(mapAt(Math.floor(px - r), Math.floor(py - r))) ||
+        !walk(mapAt(Math.floor(px + r), Math.floor(py - r))) ||
+        !walk(mapAt(Math.floor(px - r), Math.floor(py + r))) ||
+        !walk(mapAt(Math.floor(px + r), Math.floor(py + r)))) return false;
+  }
+  return true;
+}
+
 // 找最近未收集寶石
 function findNearestGem() {
   let best = null, bestD = Infinity;
@@ -5763,30 +5791,48 @@ function findNearestGem() {
 }
 
 // 規劃下一段目標（最近寶石，否則終點），回傳是否成功
-function planNextAutoTarget() {
-  // 先收集寶石
-  const gem = findNearestGem();
-  const target = gem || END;
-  const t0 = performance.now();
-  const path = findPath(player.x, player.y, target.x, target.y);
-  const planMs = performance.now() - t0;
-  // 大地圖首次尋路較慢時給予視覺回饋
-  if (planMs > 50) showToast(`規劃路徑中... ${planMs.toFixed(0)}ms`);
-  if (!path || path.length < 2) return false;
-  autoPath = path;
-  autoPathIndex = 1;
-  rebuildPathMarks();
-  // 對比模式：同時計算 4 種演算法路徑與數據
-  if (compareMode) runAlgorithmComparison(target);
-  // 幽靈：從起點重新規劃最優（A*）路徑
-  if (ghostMode) initGhost();
-  // 顯示路徑資訊
-  const info = document.getElementById('autoplay-info');
-  const est = (path.length * 0.24).toFixed(1);
-  const algoName = { astar: 'A*', bfs: 'BFS', dfs: 'DFS', greedy: '貪婪' }[pathfindAlgo] || pathfindAlgo;
-  info.textContent = `${algoName} 路徑 ${path.length} 格 • 預估 ${est}s • ` + (gem ? '前往寶石' : '前往終點');
-  info.style.display = 'block';
-  return true;
+// skipSmooth=true 時使用未平滑的格中心路徑（卡住重試用，保證碰撞安全）
+function planNextAutoTarget(skipSmooth) {
+  pfAutoDoors = true; // 自動遊玩：鎖門可自動打開，尋路時視為可行走
+  try {
+    // 依距離排序未收集寶石；最近寶石不可達時依序嘗試，最後退到終點
+    const gemsList = gems.filter(g => !g.collected).sort((a, b) => {
+      const da = (player.x - a.x) ** 2 + (player.y - a.y) ** 2;
+      const db = (player.x - b.x) ** 2 + (player.y - b.y) ** 2;
+      return da - db;
+    });
+    const t0 = performance.now();
+    let target = null, raw = null;
+    for (const g of gemsList) {
+      raw = findPathRaw(player.x, player.y, g.x, g.y, pathfindAlgo);
+      if (raw.path) { target = g; break; }
+    }
+    if (!target) {
+      target = END;
+      raw = findPathRaw(player.x, player.y, END.x, END.y, pathfindAlgo);
+    }
+    const planMs = performance.now() - t0;
+    // 大地圖首次尋路較慢時給予視覺回饋
+    if (planMs > 50) showToast(`規劃路徑中... ${planMs.toFixed(0)}ms`);
+    if (!raw || !raw.path || raw.path.length < 2) return false;
+    const path = skipSmooth ? raw.path : smoothPath(raw.path);
+    autoPath = path;
+    autoPathIndex = 1;
+    rebuildPathMarks();
+    // 對比模式：同時計算 4 種演算法路徑與數據
+    if (compareMode) runAlgorithmComparison(target);
+    // 幽靈：從起點重新規劃最優（A*）路徑
+    if (ghostMode) initGhost();
+    // 顯示路徑資訊
+    const info = document.getElementById('autoplay-info');
+    const est = (path.length * 0.24).toFixed(1);
+    const algoName = { astar: 'A*', bfs: 'BFS', dfs: 'DFS', greedy: '貪婪' }[pathfindAlgo] || pathfindAlgo;
+    info.textContent = `${algoName} 路徑 ${path.length} 格 • 預估 ${est}s • ` + (target === END ? '前往終點' : '前往寶石');
+    info.style.display = 'block';
+    return true;
+  } finally {
+    pfAutoDoors = false;
+  }
 }
 
 // 對比模式：對同一目標跑 4 種演算法
@@ -5846,6 +5892,7 @@ function startAutoPlay() {
   }
   autoPlay = true;
   stuckTimer = 0;
+  autoStuckCount = 0;
   stuckLastX = player.x;
   stuckLastY = player.y;
   document.getElementById('autoplay-status').style.display = 'block';
@@ -5926,13 +5973,16 @@ function updateAutoPlay(dt) {
   if (movedDist < 0.02) {
     stuckTimer += dt;
     if (stuckTimer > 0.8) {
-      // 卡住超過0.8秒，重新規劃路徑
+      // 卡住超過0.8秒：先試正常平滑重規劃；連續卡住≥2次則退回格中心路徑
       stuckTimer = 0;
-      if (planNextAutoTarget()) return; // 重新規劃成功，下一幀繼續
+      autoStuckCount++;
+      const skip = autoStuckCount >= 2;
+      if (planNextAutoTarget(skip)) return; // 重新規劃成功，下一幀繼續
       else { stopAutoPlay(); return; }
     }
   } else {
     stuckTimer = 0;
+    autoStuckCount = 0;
   }
   stuckLastX = player.x;
   stuckLastY = player.y;
@@ -5964,8 +6014,13 @@ function updateAutoPlay(dt) {
     let nextDiff = nextAngle - player.dir;
     while (nextDiff > Math.PI) nextDiff -= Math.PI * 2;
     while (nextDiff < -Math.PI) nextDiff += Math.PI * 2;
-    // 弱混合（最多30%看向下一點），確保主要方向仍是當前目標
-    const blend = Math.max(0, (dist - 0.7) / 1.5) * 0.3;
+    // 前視方向與目前目標方向差距過大（急轉彎/狹廊）時停用前瞻，
+    // 避免側向漂移把玩家帶離走廊貼到牆上（卡牆震盪的根因）
+    let dirDiff = nextAngle - angleDiff;
+    while (dirDiff > Math.PI) dirDiff -= Math.PI * 2;
+    while (dirDiff < -Math.PI) dirDiff += Math.PI * 2;
+    // 弱混合（最多30%看向下一點），僅在方向相近時使用
+    const blend = Math.abs(dirDiff) < 1.0 ? Math.max(0, (dist - 0.7) / 1.5) * 0.3 : 0;
     turnAngle = angleDiff * (1 - blend) + nextDiff * blend;
   }
 
