@@ -167,36 +167,36 @@
     inset: 0;
     background: rgba(5,5,15,0.94);
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
+    align-items: center; justify-content: flex-start;
     z-index: 100;
     text-align: center;
     padding: 20px;
   }
   #start-screen h1 {
-    font-size: 42px;
+    font-size: 30px;
     color: #4af;
     text-shadow: 0 0 30px rgba(68,170,255,0.6), 0 0 60px rgba(68,170,255,0.3);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     letter-spacing: 4px;
   }
   #start-screen .subtitle {
-    font-size: 14px;
+    font-size: 13px;
     color: #888;
-    margin-bottom: 30px;
+    margin-bottom: 12px;
     letter-spacing: 3px;
   }
   #start-screen .controls {
-    font-size: 13px;
-    line-height: 2;
+    font-size: 12px;
+    line-height: 1.7;
     color: #aaa;
-    margin-bottom: 30px;
+    margin-bottom: 12px;
   }
   #start-btn {
     background: linear-gradient(135deg, #4af, #28c);
     color: #fff;
     border: none;
-    padding: 16px 50px;
-    font-size: 18px;
+    padding: 12px 44px;
+    font-size: 16px;
     font-family: inherit;
     border-radius: 8px;
     cursor: pointer;
@@ -205,6 +205,9 @@
     box-shadow: 0 0 30px rgba(68,170,255,0.4);
   }
   #start-btn:active { transform: scale(0.96); }
+  /* 桌面版：精簡下方堆叠按鈕間距，避免 720px 視窗垂直溢出 */
+  #start-screen #editor-btn, #start-screen #autoplay-btn, #start-screen #ach-btn { margin-top: 6px !important; }
+  #start-screen #start-info { margin-top: 8px !important; }
 
   /* ===== 勝利畫面 ===== */
   #win-screen {
@@ -515,7 +518,7 @@
   /* ===== 自動遊玩：演算法工具列 ===== */
   #algo-bar {
     position: absolute;
-    top: calc(176px + env(safe-area-inset-top));
+    top: calc(196px + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     display: none;
@@ -896,7 +899,7 @@
   /* ===== 自動遊玩路徑資訊 ===== */
   #autoplay-info {
     position: absolute;
-    top: calc(148px + env(safe-area-inset-top));
+    top: calc(178px + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     background: rgba(170,68,255,0.2);
@@ -915,7 +918,7 @@
     display: flex;
     gap: 10px;
     justify-content: center;
-    margin-bottom: 24px;
+    margin-bottom: 10px;
   }
   .diff-btn {
     background: rgba(255,255,255,0.06);
@@ -939,20 +942,20 @@
   .diff-desc {
     font-size: 12px;
     color: #666;
-    margin-bottom: 24px;
+    margin-bottom: 8px;
     min-height: 18px;
   }
   .size-label {
     font-size: 12px;
     color: #555;
     letter-spacing: 3px;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
   .size-row {
     display: flex;
     gap: 6px;
     justify-content: center;
-    margin-bottom: 28px;
+    margin-bottom: 12px;
     flex-wrap: wrap;
     max-width: 680px;
   }
@@ -1125,13 +1128,16 @@
   body.boss-active #dayphase-hud,
   body.boss-active #timer-hud,
   body.boss-active #gem-hud,
-  body.boss-active #autoplay-status {
+  body.boss-active #autoplay-status,
+  body.boss-active #autoplay-info,
+  body.boss-active #algo-bar {
     transform: translateX(-50%) translateY(54px);
   }
   /* 行動端：Boss 條出現時左側 HUD 讓位，避免遮擋 */
   body.is-mobile.boss-active #hp-hud { top: calc(56px + env(safe-area-inset-top)); }
   body.is-mobile.boss-active #key-hud { top: calc(108px + env(safe-area-inset-top)); }
   body.is-mobile.boss-active #buffs-hud { top: calc(140px + env(safe-area-inset-top)); }
+  body.is-mobile.boss-active #combo-hud { top: calc(194px + env(safe-area-inset-top)) !important; }
   body.is-mobile #boss-hud { width: 92vw; max-width: 92vw; }
 
   /* ===== 浮動文字（升級 / 時段切換提示） ===== */
@@ -1246,6 +1252,23 @@
   }
   .buff-chip .buff-icon { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
+  /* ===== 蹲下狀態指示 ===== */
+  #crouch-hud {
+    position: absolute;
+    top: calc(172px + env(safe-area-inset-top));
+    left: 8px;
+    z-index: 10;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(120,200,140,0.5);
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: #8e8;
+    letter-spacing: 1px;
+    display: none;
+  }
+  body.crouching #crouch-hud { display: block; }
+
   /* ===== 傷害暗角 ===== */
   #damage-vignette {
     position: absolute;
@@ -1257,6 +1280,7 @@
     transition: opacity 0.1s;
   }
   #damage-vignette.flash { opacity: 1; transition: opacity 0.05s; }
+  body.no-screen-effects #damage-vignette { display: none !important; }
 
   /* ===== 死亡畫面 ===== */
   #death-screen {
@@ -1361,6 +1385,19 @@
   #btn-shoot:active {
     background: rgba(120,255,220,0.4);
     border-color: #6fd;
+    color: #fff;
+  }
+
+  /* 移動端上帝視角按鈕（置於右手拇指叢：衝刺右上方、能量彈右側空位） */
+  #btn-god {
+    right: 92px;
+    bottom: calc(228px + env(safe-area-inset-bottom));
+    border-color: rgba(170,140,255,0.6);
+    color: #b9f;
+  }
+  .touch-btn#btn-god.active {
+    background: rgba(170,68,255,0.4);
+    border-color: #a4f;
     color: #fff;
   }
 
@@ -1925,6 +1962,8 @@
   <div id="key-hud"><span class="key-icon"></span>鑰匙 <span id="key-count">0</span></div>
   <!-- 增益狀態 -->
   <div id="buffs-hud"></div>
+  <!-- 蹲下狀態指示 -->
+  <div id="crouch-hud">蹲下潛行</div>
   <!-- 傷害暗角 -->
   <div id="damage-vignette"></div>
   <!-- 後處理色偏覆蓋層 -->
@@ -1991,6 +2030,9 @@
     <div><span class="key">P</span> 自動遊玩</div>
     <div><span class="key">M</span> 小地圖</div>
     <div><span class="key">F</span> 手電筒</div>
+    <div><span class="key">Q</span> 衝刺 &nbsp; <span class="key">E</span> 能量彈</div>
+    <div><span class="key">C</span> 蹲下 &nbsp; <span class="key">G</span> 上帝視角</div>
+    <div><span class="key">Esc</span> 暫停</div>
   </div>
 
   <!-- 桌面手電筒滑桿 -->
@@ -2095,6 +2137,8 @@
       <button class="weather-btn" data-weather="rain">雨</button>
       <button class="weather-btn" data-weather="fog">濃霧</button>
       <button class="weather-btn" data-weather="storm">暴風雨</button>
+      <button class="weather-btn" data-weather="snow">雪</button>
+      <button class="weather-btn" data-weather="sand">沙塵</button>
     </div>
     <div class="controls" id="start-controls">
       載入中...
@@ -2103,7 +2147,7 @@
     <button id="editor-btn" style="margin-top:14px;background:linear-gradient(135deg,#666,#444);box-shadow:0 0 15px rgba(100,100,100,0.3);">自訂地圖</button>
     <button id="autoplay-btn" style="margin-top:10px;background:linear-gradient(135deg,#a4f,#82c);box-shadow:0 0 15px rgba(170,68,255,0.3);">AI 自動遊玩</button>
     <button id="ach-btn" style="margin-top:10px;background:linear-gradient(135deg,#c93,#960);box-shadow:0 0 15px rgba(255,200,60,0.3);">成就與統計</button>
-    <div id="start-info">版本 v2.1　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
+    <div id="start-info">版本 v2.3　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
   </div>
 
   <!-- 勝利畫面 -->
@@ -2201,6 +2245,21 @@
         </select>
       </div>
       <div class="setting-row">
+        <label>提示訊息時長</label>
+        <select id="set-toastduration">
+          <option value="1000">短（1 秒）</option>
+          <option value="1500">中（1.5 秒）</option>
+          <option value="2500">長（2.5 秒）</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label>螢幕特效</label>
+        <select id="set-screeneffects">
+          <option value="on">開啟</option>
+          <option value="off">關閉</option>
+        </select>
+      </div>
+      <div class="setting-row">
         <label>顯示 FPS</label>
         <select id="set-fps">
           <option value="on">開啟</option>
@@ -2265,6 +2324,7 @@
         <button class="tool-btn" data-tool="end" title="設置終點">終點</button>
         <button class="tool-btn" data-tool="spike" title="放置尖刺陷阱">尖刺</button>
         <button class="tool-btn" data-tool="door" title="放置鎖門">鎖門</button>
+        <button class="tool-btn" data-tool="bars" title="放置欄杆（障礙物）">欄杆</button>
         <button class="tool-btn" data-tool="fill" title="填充（油漆桶）">填充</button>
         <button class="tool-btn" data-tool="select" title="選擇區域">選擇</button>
         <button class="tool-btn" data-tool="rect" title="拖曳畫矩形（牆/依筆刷值）">矩形</button>
@@ -2429,6 +2489,8 @@ const settings = {
   learningMode: false,       // 學習模式（記錄玩家路徑對比最優）
   activeSaveSlot: 1,         // 目前使用的存檔槽 1/2/3
   particleDensity: 'high',   // 粒子密度 low/medium/high
+  toastDuration: 1500,       // Toast 提示顯示時長（ms）
+  screenEffects: true,       // 螢幕特效（傷害暗角 / 鏡頭震動）開關
 };
 function loadSettings() {
   try {
@@ -2448,7 +2510,7 @@ let particleLimit = 200;
 // 更新開始畫面控制提示
 startControls.innerHTML = isMobile
   ? '從綠色起點出發，找到金色終點！<br>左側搖桿移動 &nbsp;|&nbsp; 右側滑動轉向<br>擊鍵攻擊 &nbsp;|&nbsp; AI自動遊玩 &nbsp;|&nbsp; 自訂地圖'
-  : '從綠色起點出發，找到金色終點！<br>WASD 移動 &nbsp;|&nbsp; 滑鼠/方向鍵 轉向 &nbsp;|&nbsp; 空白鍵/左鍵 攻擊<br>P 自動遊玩 &nbsp;|&nbsp; F 手電筒 &nbsp;|&nbsp; M 小地圖';
+  : '從綠色起點出發，找到金色終點！<br>WASD 移動 &nbsp;|&nbsp; 滑鼠/方向鍵 轉向 &nbsp;|&nbsp; 空白鍵/左鍵 攻擊<br>Q 衝刺 &nbsp;|&nbsp; E 能量彈 &nbsp;|&nbsp; C 蹲下 &nbsp;|&nbsp; G 上帝視角<br>P 自動遊玩 &nbsp;|&nbsp; F 手電筒 &nbsp;|&nbsp; M 小地圖 &nbsp;|&nbsp; Esc 暫停';
 
 // --- 畫布尺寸 ---
 const QUALITY_SCALE = { low: 0.3, medium: 0.4, high: 0.5 };
@@ -2624,6 +2686,7 @@ let showMinimap = true;
 let torchOn = true;
 let torchIntensity = 0.6;
 let mouseLocked = false;
+let lockEngageT = 0;  // pointer lock 由 false→true 的時間戳（用於過濾啟動合成 mousemove 跳動）
 let gameStarted = false;
 let gameStartTime = 0;
 let gameElapsed = 0;
@@ -2695,7 +2758,9 @@ function generateAndApplyRandomMap(sizeKey) {
     }
   }
   // 随機打通一些牆，增加環路（避免完美迷宮太單一）
-  const extraOpens = Math.floor((cols * rows) * 0.03);
+  // 環路率：打通牆格佔總格數的比例（參數化常數，便於日後調整）
+  const LOOP_RATE = 0.03;
+  const extraOpens = Math.floor((cols * rows) * LOOP_RATE);
   for (let i = 0; i < extraOpens; i++) {
     const ox = 1 + Math.floor(Math.random() * (cols - 2));
     const oy = 1 + Math.floor(Math.random() * (rows - 2));
@@ -2907,6 +2972,11 @@ let ghost = null;                // {x,y,dir,path,idx}
 let pathGlowEnabled = true;      // 3D 路徑光帶開關
 let lastReplannTime = 0;         // 即時重算節流（ms 時間戳）
 let pendingReplann = false;      // 地形改變待重算旗標
+// 自動遊玩戰鬥鎖死逃逸：連續戰鬥但玩家與敵人距離幾乎不變時強制退出戰鬥分支
+let combatLockT = 0;             // 連續處於戰鬥分支的秒數
+let combatLockX = 0, combatLockY = 0; // 進入戰鬥時的玩家錨點位置
+let combatLockNearD = 0;         // 進入戰鬥時與最近敵人的距離
+let shootCooldown = 0;           // 能量彈射速限制（秒）
 let testMode = false;            // 編輯器測試模式（不影響已儲存地圖）
 let customEntities = null;       // 編輯器放置的實體（進入遊戲時生效）
 let teleporters = [];            // 執行期傳送點 [{ax,ay,bx,by}]
@@ -3890,10 +3960,19 @@ function render() {
         cr = 255; cg = 150; cb = 40;
       } else if (e.type === 'splitter') {
         cr = 80; cg = 230; cb = 110;
+      } else if (e.type === 'bomber') {
+        // 炸彈兵：未點燃深橄欖；點燃時紅白閃爍警示
+        if (e.lit && Math.floor(frameNow / 80) % 2 === 0) { cr = 255; cg = 30; cb = 30; }
+        else { cr = 90; cg = 110; cb = 40; }
+      } else if (e.type === 'sentinel') {
+        cr = 255; cg = 220; cb = 90; // 金黃色砲塔
       } else if (e.type === 'boss') {
-        // 紅黑相間；階段3 狂暴偏亮紅
+        // 紅黑相間；階段3 狂暴偏亮紅；階段4 (<10% HP) 白熱化
         const enraged = e.hp < e.maxHp * 0.33;
-        cr = enraged ? 255 : 180; cg = enraged ? 40 : 20; cb = enraged ? 40 : 30;
+        const berserk = e.hp < e.maxHp * 0.10;
+        cr = berserk ? 255 : (enraged ? 255 : 180);
+        cg = berserk ? 140 : (enraged ? 40 : 20);
+        cb = berserk ? 70 : (enraged ? 40 : 30);
       } else {
         cr = settings.colorblind ? 255 : 180;
         cg = settings.colorblind ? 160 : 255;
@@ -3936,6 +4015,47 @@ function render() {
             } else {
               buf[pi] = 40; buf[pi+1] = 0; buf[pi+2] = 0;
             }
+          }
+        }
+        // 腳下橢圓陰影（半透明深色，隨距離縮小）
+        {
+          const footY = centerY + halfH;
+          const shW = size * 0.45;
+          const shH = Math.max(2, size * 0.07);
+          const dxSh = stripe - spriteScreenX;
+          if (Math.abs(dxSh) < shW) {
+            const ell = 1 - (dxSh / shW) * (dxSh / shW);
+            const shAlpha = 0.32 * ell;
+            for (let sy = Math.max(0, Math.floor(footY - shH)); sy < Math.min(H, Math.floor(footY + shH)); sy++) {
+              const pi = (sy * W + stripe) * 4;
+              buf[pi]   = buf[pi]   * (1 - shAlpha);
+              buf[pi+1] = buf[pi+1] * (1 - shAlpha);
+              buf[pi+2] = buf[pi+2] * (1 - shAlpha);
+            }
+          }
+        }
+      }
+      // 旋轉哨兵光束：半透明黃色線，長度取到最近牆（≤6.5）
+      if (e.type === 'sentinel') {
+        for (let bi = 1; bi <= 40; bi++) {
+          const bt = (bi / 40) * 6.5;
+          const bx = e.x + Math.cos(e.beamAng) * bt;
+          const by = e.y + Math.sin(e.beamAng) * bt;
+          if (isBlocking(mapAt(Math.floor(bx), Math.floor(by)))) break;
+          const bSX = bx - player.x, bSY = by - player.y;
+          const bTY = invDetSpr * (-planeY * bSX + planeX * bSY);
+          if (bTY <= 0.1) continue;
+          const bTX = invDetSpr * (dirY * bSX - dirX * bSY);
+          const bScrX = Math.floor((W / 2) * (1 + bTX / bTY));
+          if (bScrX < 0 || bScrX >= W) continue;
+          if (bTY >= zBuffer[bScrX]) continue;
+          const bAlpha = 0.28 * (1 - bt / 6.5);
+          const bScrY = Math.floor(H / 2);
+          for (let byy = bScrY - 2; byy <= bScrY + 2 && byy >= 0 && byy < H; byy++) {
+            const pi = (byy * W + bScrX) * 4;
+            buf[pi]   = buf[pi]   * (1 - bAlpha) + 255 * bAlpha;
+            buf[pi+1] = buf[pi+1] * (1 - bAlpha) + 240 * bAlpha;
+            buf[pi+2] = buf[pi+2] * (1 - bAlpha) + 120 * bAlpha;
           }
         }
       }
@@ -4081,7 +4201,7 @@ function render() {
 
   // --- 螢幕震動偏移 ---
   let shakeX = 0, shakeY = 0;
-  if (shakeTime > 0) {
+  if (shakeTime > 0 && settings.screenEffects !== false) {
     const decay = shakeTime / shakeDuration;
     shakeX = (Math.random() - 0.5) * 2 * shakeAmp * decay;
     shakeY = (Math.random() - 0.5) * 2 * shakeAmp * decay;
@@ -4731,7 +4851,11 @@ function generateGems() {
     const j = Math.floor(Math.random() * (i + 1));
     [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
-  const count = Math.min(5 + Math.floor(Math.random() * 4), candidates.length);
+  // 寶石數量隨地圖面積縮放：小圖維持 5-8，超大圖最多約 25，外加隨機浮動
+  const area = MAP_W * MAP_H;
+  let base = 8 + Math.floor(area / 400);
+  base = Math.max(5, Math.min(25, base));
+  const count = Math.min(base + Math.floor(Math.random() * 3) - 1, candidates.length);
   for (let i = 0; i < count; i++) {
     gems.push({
       x: candidates[i].x + 0.5,
@@ -4833,10 +4957,17 @@ function generateDoorsAndKeys() {
     }
   }
   if (hasExistingDoor) {
-    // 已有門：在起點附近放一把鑰匙
+    // 已有門：掃描 MAP 中 TILE_DOOR 數量，等量放鑰匙（上限 4 把，避免過多）
+    let doorCount = 0;
+    for (let y = 1; y < MAP_H - 1; y++) {
+      for (let x = 1; x < MAP_W - 1; x++) {
+        if (MAP[y][x] === TILE_DOOR) doorCount++;
+      }
+    }
+    const keyToPlace = Math.min(4, Math.max(1, doorCount));
     const cands = collectEmptyCandidates(2);
-    if (cands.length) {
-      keyItems.push({ x: cands[0].x + 0.5, y: cands[0].y + 0.5, collected: false, phase: 0 });
+    for (let k = 0; k < keyToPlace && k < cands.length; k++) {
+      keyItems.push({ x: cands[k].x + 0.5, y: cands[k].y + 0.5, collected: false, phase: 0 });
     }
     currentMapVersion++;
     updateKeyHUD();
@@ -4881,6 +5012,16 @@ function makeEnemyOfType(type, c) {
   if (type === 'swarm') { const h = scale(15); return { ...base, type, hp: h, maxHp: h, speed: 3.4, touchDmg: 10 }; }
   // splitter 分裂體：綠色、緩慢追獵者，死亡時分裂出 swarm
   if (type === 'splitter') { const h = scale(60); return { ...base, type, hp: h, maxHp: h, speed: 1.1, touchDmg: 12 }; }
+  // bomber 炸彈兵：低 HP、高速衝撞，靠近後點燃引信，到點爆炸（範圍傷害）
+  if (type === 'bomber') {
+    const h = scale(35);
+    return { ...base, type, hp: h, maxHp: h, speed: 1.7, touchDmg: 8, fuseT: -1, lit: false };
+  }
+  // sentinel 旋轉哨兵：固定砲塔，光束旋轉掃射玩家（速度 0）
+  if (type === 'sentinel') {
+    const h = scale(90);
+    return { ...base, type, hp: h, maxHp: h, speed: 0, touchDmg: 10, beamAng: Math.random() * Math.PI * 2, beamHitCd: 0 };
+  }
   // patrol 預設
   const h = scale(30);
   return { ...base, type: 'patrol', hp: h, maxHp: h, speed: 1.3, touchDmg: 10 };
@@ -4903,6 +5044,8 @@ function generateEnemies() {
   if (area >= 25*25) pool.push('tank');
   if (area >= 21*21) pool.push('swarm');
   if (area >= 19*19) pool.push('splitter'); // 分裂體（小權重，入池一次）
+  // 炸彈兵 / 旋轉哨兵：僅 medium 以上迷宮，低權重（各入池一次）
+  if (area >= 23*23) { pool.push('bomber'); pool.push('sentinel'); }
   let swarmSpawned = false;
   for (let i = 0; i < count; i++) {
     let type = pool[Math.floor(Math.random() * pool.length)];
@@ -4989,15 +5132,11 @@ function spawnCustomEntityActors() {
   }
   for (const e of customEntities) {
     if (e.type === 'enemy' && isWalkable(mapAt(e.x, e.y))) {
-      const isChaser = e.enemyType === 'chaser';
-      enemies.push({
-        x: e.x + 0.5, y: e.y + 0.5,
-        hp: isChaser ? 50 : 30, maxHp: isChaser ? 50 : 30,
-        speed: isChaser ? 2.6 : 1.3,
-        type: isChaser ? 'chaser' : 'patrol',
-        state: 'patrol', attackCd: 0, hitFlash: 0, stunT: 0,
-        dir: Math.random() * Math.PI * 2, patrolT: 0, repathT: 0, moveX: 0, moveY: 0,
-      });
+      // 依屬性面板選擇的敵人類型生成；boss/bomber/sentinel 等由玩法端 makeEnemyOfType 支援
+      const et = e.enemyType || 'patrol';
+      const actor = makeEnemyOfType(et, { x: e.x, y: e.y });
+      if (et === 'boss') { actor.type = 'boss'; actor.hp = 300; actor.maxHp = 300; actor.speed = 1.2; actor.touchDmg = 25; actor.summonT = 5; bossRef = actor; }
+      enemies.push(actor);
     } else if (e.type === 'item' && isWalkable(mapAt(e.x, e.y))) {
       const types = ['health', 'speed', 'shield', 'star'];
       const t = (e.itemType && e.itemType !== 'random') ? e.itemType : types[Math.floor(Math.random() * types.length)];
@@ -5087,8 +5226,8 @@ function updateComboHUD() {
       comboHudEl = document.createElement('div');
       comboHudEl.id = 'combo-hud';
       comboHudEl.style.position = 'fixed';
-      comboHudEl.style.top = '70px';
-      comboHudEl.style.left = '12px';
+      comboHudEl.style.top = 'calc(140px + env(safe-area-inset-top))';
+      comboHudEl.style.left = '8px';
       comboHudEl.style.fontFamily = 'monospace';
       comboHudEl.style.fontSize = '18px';
       comboHudEl.style.color = '#ffd24a';
@@ -5136,7 +5275,7 @@ function showToast(msg) {
   el.textContent = msg;
   el.classList.add('show');
   if (toastTimeout) clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => el.classList.remove('show'), 1500);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), settings.toastDuration || 1500);
 }
 
 // --- 浮動文字（升級 / 時段切換等） ---
@@ -5318,6 +5457,7 @@ function spawnEnemyDeathBurst(e) {
     chaser: [255, 80, 80], patrol: [180, 255, 80],
     shooter: [180, 80, 255], tank: [120, 120, 130],
     swarm: [255, 150, 40], boss: [255, 60, 60],
+    bomber: [255, 120, 30], sentinel: [255, 220, 80],
   };
   const color = colorMap[e.type] || [180, 255, 80];
   const count = e.type === 'boss' ? 60 : 16;
@@ -5332,6 +5472,23 @@ function spawnEnemyDeathBurst(e) {
       e.type === 'boss' ? 3 + Math.random() * 3 : 2 + Math.random() * 2
     );
   }
+}
+
+// 炸彈兵爆炸：橙紅色範圍粒子 + 對 2.0 半徑內玩家造成傷害（走 damagePlayer 尊重無敵/autoPlay）
+function bomberExplode(e) {
+  for (let i = 0; i < 26; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = 1 + Math.random() * 2.5;
+    spawnParticle(
+      e.x, e.y, 0.4 + Math.random() * 0.3,
+      Math.cos(angle) * spd, Math.sin(angle) * spd, (Math.random() - 0.3) * 1.5,
+      0.5 + Math.random() * 0.35,
+      [255, 100 + Math.random() * 120, 30],
+      2.5 + Math.random() * 2
+    );
+  }
+  const d = Math.hypot(player.x - e.x, player.y - e.y);
+  if (d <= 2.0) damagePlayer(35, '炸彈兵爆炸');
 }
 
 // 投射物更新
@@ -5369,7 +5526,7 @@ function updateProjectiles(dt) {
         if (e.state === 'dead') continue;
         const dx = e.x - pr.x, dy = e.y - pr.y;
         if (dx*dx + dy*dy < 0.4*0.4) {
-          e.hp -= pr.damage;
+          if (!(e.type === 'boss' && e.berserkInvuln > 0)) e.hp -= pr.damage;
           e.hitFlash = 0.15;
           spawnParticle(e.x, e.y, 0.5, 0, 0, 1, 0.3, pr.color, 2);
           if (e.hp <= 0) killEnemy(e);
@@ -5392,8 +5549,10 @@ function killEnemy(e) {
   unlockAchievement('first_kill');
   if (stats.totalKills >= 20) unlockAchievement('kills_20');
   // XP 獎勵
-  const xpMap = { patrol: 10, chaser: 15, shooter: 20, tank: 30, swarm: 5, splitter: 20, boss: 200 };
+  const xpMap = { patrol: 10, chaser: 15, shooter: 20, tank: 30, swarm: 5, splitter: 20, bomber: 20, sentinel: 25, boss: 200 };
   gainXP(xpMap[e.type] || 10);
+  // 炸彈兵被擊殺時也會爆炸（範圍傷害玩家）
+  if (e.type === 'bomber') bomberExplode(e);
   // splitter 死亡：在其四周空地生成 2 隻 swarm（只分裂一次，不無限遞迴）
   if (e.type === 'splitter') {
     for (let s = 0; s < 2; s++) {
@@ -5447,11 +5606,23 @@ function updateEnemies(dt) {
       if (ratio < 0.33) { e.touchDmg = 40; spdMult = 1.9; }
       else if (ratio < 0.66) { e.touchDmg = 25; spdMult = 1.4; }
       else { e.touchDmg = 25; spdMult = 1.0; }
+      // === 第四階段狂暴（HP 首次 <10%）：速度×2.2、觸傷×1.6、召喚間隔減半、1.2 秒無敵閃紅 ===
+      const berserk = ratio < 0.10;
+      if (berserk) {
+        spdMult *= 2.2;
+        e.touchDmg = Math.round(e.touchDmg * 1.6);
+        if (!e.berserkTriggered) {
+          e.berserkTriggered = true;
+          e.berserkInvuln = 1.2;
+          e.hitFlash = 1.2; // 閃白/紅
+        }
+      }
+      if (e.berserkInvuln > 0) e.berserkInvuln -= dt;
       // 階段2/3 定期召喚 swarm
       if (ratio < 0.66) {
         e.summonT -= dt;
         if (e.summonT <= 0) {
-          e.summonT = 8;
+          e.summonT = berserk ? 4 : 8; // 狂暴時召喚間隔減半
           for (let s = 0; s < 2; s++) {
             const ang = Math.random() * Math.PI * 2;
             const sx = e.x + Math.cos(ang) * 1.2, sy = e.y + Math.sin(ang) * 1.2;
@@ -5485,9 +5656,55 @@ function updateEnemies(dt) {
       e.dir = ang;
       if (enemyCanMove(e.x + mvx, e.y)) e.x += mvx;
       if (enemyCanMove(e.x, e.y + mvy)) e.y += mvy;
-      if (distToPlayer < 0.7 && e.attackCd <= 0) {
+      // 移動後重新算距離再做接觸判定（舊 distToPlayer 是移動前的，會誤判）
+      const bossDist = Math.hypot(player.x - e.x, player.y - e.y);
+      if (bossDist < 0.7 && e.attackCd <= 0) {
         e.attackCd = 1.0;
         damagePlayer(e.touchDmg, enemyDeathName(e));
+      }
+      continue;
+    }
+
+    // === 旋轉哨兵：固定位置，光束每秒旋轉約 1.2 弧度掃射 ===
+    if (e.type === 'sentinel') {
+      e.beamAng += 1.2 * dt;
+      if (e.beamHitCd > 0) e.beamHitCd -= dt;
+      let angDiff = Math.atan2(dy, dx) - e.beamAng;
+      while (angDiff > Math.PI) angDiff -= Math.PI * 2;
+      while (angDiff < -Math.PI) angDiff += Math.PI * 2;
+      if (Math.abs(angDiff) <= 0.1 && distToPlayer <= 6.5 && e.beamHitCd <= 0 &&
+          enemyHasLOS(e.x, e.y, player.x, player.y)) {
+        e.beamHitCd = 0.5;
+        damagePlayer(15, '旋轉哨兵光束');
+      }
+      continue;
+    }
+
+    // === 炸彈兵：追擊玩家，靠近點燃引信，到點爆炸（範圍傷害） ===
+    if (e.type === 'bomber') {
+      e.state = 'chase';
+      if (e.lit) {
+        e.fuseT -= dt;
+        if (distToPlayer > 3.0) { e.lit = false; e.fuseT = -1; } // 玩家逃出→解除點燃
+        else if (e.fuseT <= 0) {
+          bomberExplode(e);
+          e.state = 'dead';
+          continue;
+        }
+      } else if (distToPlayer < 2.2) {
+        e.lit = true; e.fuseT = 0.8; // 點燃閃爍
+      }
+      const ang = Math.atan2(dy, dx);
+      e.dir = ang;
+      const spd = e.speed * nightMult;
+      const bmvx = Math.cos(ang) * spd * dt;
+      const bmvy = Math.sin(ang) * spd * dt;
+      if (enemyCanMove(e.x + bmvx, e.y)) e.x += bmvx;
+      if (enemyCanMove(e.x, e.y + bmvy)) e.y += bmvy;
+      const bTouch = Math.hypot(player.x - e.x, player.y - e.y);
+      if (bTouch < 0.55 && e.attackCd <= 0) {
+        e.attackCd = 1.0;
+        damagePlayer(e.touchDmg, '炸彈兵');
       }
       continue;
     }
@@ -5543,9 +5760,10 @@ function updateEnemies(dt) {
     if (enemyCanMove(e.x, e.y + mvy)) e.y += mvy;
     else if (e.state === 'patrol') e.patrolT = 0;
 
-    // 接觸玩家造成傷害
+    // 接觸玩家造成傷害（移動後重新算距離，避免用移動前的舊距離誤判）
+    const touchDist = Math.hypot(player.x - e.x, player.y - e.y);
     const touchRange = e.type === 'tank' ? 0.7 : 0.55;
-    if (distToPlayer < touchRange && e.attackCd <= 0) {
+    if (touchDist < touchRange && e.attackCd <= 0) {
       e.attackCd = 1.0;
       damagePlayer(e.touchDmg || (e.type === 'chaser' ? 20 : 10), enemyDeathName(e));
     }
@@ -5559,6 +5777,9 @@ function enemyDeathName(e) {
     case 'shooter': return '遠程射手';
     case 'tank': return '裝甲坦克';
     case 'swarm': return '蟲群 (Swarm)';
+    case 'bomber': return '炸彈兵';
+    case 'sentinel': return '旋轉哨兵';
+    case 'splitter': return '分裂體';
     case 'chaser':
     default: return '追蹤者';
   }
@@ -5613,7 +5834,10 @@ function playerAttack() {
         if (enemyCanMove(nx, e.y)) e.x = nx;
         if (enemyCanMove(e.x, ny)) e.y = ny;
       }
-      e.hp -= dmg;
+      // Boss 狂暴 1.2 秒無敵期間不吃近戰傷害
+      if (!(e.type === 'boss' && e.berserkInvuln > 0)) {
+        e.hp -= dmg;
+      }
       e.hitFlash = 0.15;
       e.stunT = 0.2;
       hitAny = true;
@@ -5701,8 +5925,10 @@ function onBossDefeated(boss) {
 // --- 玩家遠程射擊（能量水晶彈） ---
 function playerShoot() {
   if (playerDead || gameWon || paused) return;
+  if (shootCooldown > 0) return; // 射速限制，避免無限連射
   if (playerAmmo <= 0) { showToast('沒有能量彈！'); return; }
   playerAmmo--;
+  shootCooldown = 0.35; // 約 0.35 秒射速
   projectiles.push({
     x: player.x, y: player.y, dir: player.dir,
     speed: 9.0, damage: 30, color: [100, 200, 255],
@@ -5935,6 +6161,20 @@ function hasLineOfSight(p1, p2) {
   return true;
 }
 
+// 浮點座標線段視線檢查：沿兩點連線每 0.2 單位取樣，任一取樣被牆/門/欄柵阻擋即視為無視線。
+// 供自動遊玩戰鬥分支使用，避免敵人在牆另一側時 AI 對牆攻擊造成軟鎖。
+function segmentHasLOS(x0, y0, x1, y1) {
+  const dist = Math.hypot(x1 - x0, y1 - y0);
+  const steps = Math.max(1, Math.ceil(dist / 0.2));
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    const sx = x0 + (x1 - x0) * t;
+    const sy = y0 + (y1 - y0) * t;
+    if (isBlocking(mapAt(Math.floor(sx), Math.floor(sy)))) return false;
+  }
+  return true;
+}
+
 // 弦線走廊安全檢查：以玩家碰撞盒（半徑 r）沿整條弦線密集取樣，
 // 任何取樣點的四角觸牆即拒絕——防止平滑路徑斜切牆角造成自動遊玩卡牆
 // 取樣步長 0.04、邊距 +0.03，確保涵蓋玩家實際碰撞半徑（0.2）
@@ -6123,36 +6363,56 @@ function updateAutoPlay(dt) {
     if (d < nearD) { nearD = d; nearE = e; }
   }
   if (nearE && nearD < 1.8) {
-    const angToE = Math.atan2(nearE.y - player.y, nearE.x - player.x);
-    // 面向敵人（快速轉向）
-    let diff = angToE - player.dir;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    const maxTurn = autoTurnSpeed * dt;
-    player.dir += Math.sign(diff) * Math.min(Math.abs(diff), maxTurn);
-    // 攻擊：冷卻好且大致面向敵人時出手
-    if (attackCooldown <= 0 && Math.abs(diff) < 0.9) playerAttack();
-    // 閃避：敵人貼近時橫向拉開（保持距離避免被纏住），兩側被擋則後退
-    if (nearD < 1.15) {
-      const sp = autoMoveSpeed * dt * 0.9;
-      let moved = false;
-      for (const sa of [angToE + Math.PI / 2, angToE - Math.PI / 2]) {
-        const mx = Math.cos(sa) * sp, my = Math.sin(sa) * sp;
-        if (canMove(player.x + mx, player.y) && canMove(player.x, player.y + my)) {
-          player.x += mx; player.y += my; moved = true; break;
+    // 視線檢查：敵人在牆/門/欄柵另一側時不進入戰鬥分支，避免 AI 對牆攻擊軟鎖
+    const losOk = segmentHasLOS(player.x, player.y, nearE.x, nearE.y);
+    if (!losOk) {
+      combatLockT = 0; // 無視線：落到下面的尋路邏輯
+    } else {
+      // 首次進入戰鬥：記錄玩家錨點與初始距離，供鎖死逃逸判定
+      if (combatLockT === 0) {
+        combatLockX = player.x; combatLockY = player.y; combatLockNearD = nearD;
+      }
+      combatLockT += dt;
+      // 戰鬥鎖死逃逸：連續 >2.5 秒玩家幾乎沒移動且與最近敵人距離幾乎沒變（牆隔）→ 強制退出戰鬥
+      const movedFromAnchor = Math.hypot(player.x - combatLockX, player.y - combatLockY);
+      const combatStuck = combatLockT > 2.5 && movedFromAnchor < 0.3 && Math.abs(nearD - combatLockNearD) < 0.25;
+      if (!combatStuck) {
+        const angToE = Math.atan2(nearE.y - player.y, nearE.x - player.x);
+        // 面向敵人（快速轉向）
+        let diff = angToE - player.dir;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        const maxTurn = autoTurnSpeed * dt;
+        player.dir += Math.sign(diff) * Math.min(Math.abs(diff), maxTurn);
+        // 攻擊：冷卻好且大致面向敵人時出手
+        if (attackCooldown <= 0 && Math.abs(diff) < 0.9) playerAttack();
+        // 閃避：敵人貼近時橫向拉開（保持距離避免被纏住），兩側被擋則後退。
+        // 死區 1.15~1.3 一併納入：近於 1.3 就後撤/側閃，避免原地不進不退。
+        if (nearD < 1.3) {
+          const sp = autoMoveSpeed * dt * 0.9;
+          let moved = false;
+          for (const sa of [angToE + Math.PI / 2, angToE - Math.PI / 2]) {
+            const mx = Math.cos(sa) * sp, my = Math.sin(sa) * sp;
+            if (canMove(player.x + mx, player.y) && canMove(player.x, player.y + my)) {
+              player.x += mx; player.y += my; moved = true; break;
+            }
+          }
+          if (!moved) {
+            const bx = Math.cos(angToE + Math.PI) * sp, by = Math.sin(angToE + Math.PI) * sp;
+            if (canMove(player.x + bx, player.y) && canMove(player.x, player.y + by)) { player.x += bx; player.y += by; }
+          }
+        } else {
+          // 敵人在攻擊範圍邊緣：朝敵人推進迎擊，確保進入攻擊範圍並命中
+          const sp = autoMoveSpeed * dt * 0.8;
+          const mx = Math.cos(angToE) * sp, my = Math.sin(angToE) * sp;
+          if (canMove(player.x + mx, player.y) && canMove(player.x, player.y + my)) { player.x += mx; player.y += my; }
         }
+        return; // 戰鬥優先：本幀不執行路徑跟隨（寶石收集仍由 update() 統一處理）
       }
-      if (!moved) {
-        const bx = Math.cos(angToE + Math.PI) * sp, by = Math.sin(angToE + Math.PI) * sp;
-        if (canMove(player.x + bx, player.y) && canMove(player.x, player.y + by)) { player.x += bx; player.y += by; }
-      }
-    } else if (nearD > 1.3) {
-      // 敵人在攻擊範圍邊緣：朝敵人推進迎擊，確保進入攻擊範圍並命中
-      const sp = autoMoveSpeed * dt * 0.8;
-      const mx = Math.cos(angToE) * sp, my = Math.sin(angToE) * sp;
-      if (canMove(player.x + mx, player.y) && canMove(player.x, player.y + my)) { player.x += mx; player.y += my; }
+      combatLockT = 0; // 鎖死逃逸：重置計時，落到下面的尋路邏輯
     }
-    return; // 戰鬥優先：本幀不執行路徑跟隨（寶石收集仍由 update() 統一處理）
+  } else {
+    combatLockT = 0;
   }
   // 即時重算：地形改變（門開/傳送）後，節流最多每 500ms 重新規劃
   if (pendingReplann && (performance.now() - lastReplannTime > 500)) {
@@ -6278,6 +6538,7 @@ function update(dt) {
 
   // === 計時器 ===
   if (attackCooldown > 0) attackCooldown -= dt;
+  if (shootCooldown > 0) shootCooldown -= dt;
   if (attackAnim > 0) attackAnim -= dt;
   if (invulnTimer > 0) invulnTimer -= dt;
   if (damageFlash > 0) damageFlash -= dt;
@@ -6335,7 +6596,7 @@ function update(dt) {
   }
 
   // === 視覺反饋 ===
-  document.getElementById('damage-vignette').classList.toggle('flash', damageFlash > 0);
+  document.getElementById('damage-vignette').classList.toggle('flash', (settings.screenEffects !== false) && damageFlash > 0);
   document.getElementById('attack-swing').style.opacity = attackAnim > 0 ? (attackAnim / 0.2) * 0.7 : 0;
 
   // 傳送點觸發（兩種模式皆適用）
@@ -6375,6 +6636,8 @@ function update(dt) {
   let envMult = 1.0;
   if (settings.weather === 'rain') envMult = 0.9;
   else if (settings.weather === 'storm') envMult = 0.85;
+  else if (settings.weather === 'snow') envMult = 0.92; // 雪地略滑
+  else if (settings.weather === 'sand') envMult = 0.8;  // 沙塵中步履蹣跚
   const crouchMult = crouching ? 0.5 : 1.0;
   const speedMult = (buffs.speed > 0 ? 1.5 : 1.0) * envMult * crouchMult;
   const speed = (running ? player.moveSpeed * 1.8 : player.moveSpeed) * speedMult * dt;
@@ -6765,8 +7028,9 @@ function autoQualityAdjust(fps) {
 // --- 鍵盤輸入 ---
 document.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
-  // ESC：成就面板 > 教學覆蓋層 > 暫停
+  // ESC：上帝視角 > 成就面板 > 教學覆蓋層 > 暫停
   if (k === 'escape') {
+    if (godView) { toggleGodView(); return; }
     const achOv = document.getElementById('ach-overlay');
     if (achOv && achOv.style.display === 'flex') { if (typeof closeAchPanel === 'function') closeAchPanel(); return; }
     const tutOv = document.getElementById('tutorial-overlay');
@@ -6775,10 +7039,10 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   keys[k] = true;
-  if (k === 'm' && settings.difficulty !== 'nightmare') { showMinimap = !showMinimap; updateMinimapVisibility(); }
-  if (k === 'f') { torchOn = !torchOn; if (torchOn) runTorchUsed = true; btnTorch.classList.toggle('active', torchOn); }
+  if (k === 'm' && settings.difficulty !== 'nightmare' && gameStarted && !paused && !gameWon && !playerDead) { showMinimap = !showMinimap; updateMinimapVisibility(); }
+  if (k === 'f' && gameStarted && !paused && !gameWon && !playerDead) { torchOn = !torchOn; if (torchOn) runTorchUsed = true; btnTorch.classList.toggle('active', torchOn); }
   // C：蹲下/潛行切換（速度半減、降低被敵人偵測距離）
-  if (k === 'c' && gameStarted && !gameWon && !playerDead && !paused) { crouching = !crouching; showToast(crouching ? '蹲下潛行中' : '站起'); }
+  if (k === 'c' && gameStarted && !gameWon && !playerDead && !paused) { crouching = !crouching; document.body.classList.toggle('crouching', crouching); showToast(crouching ? '蹲下潛行中' : '站起'); }
   // G：上帝視角（2D 俯視全圖）
   if (k === 'g' && gameStarted && !gameWon && !playerDead) toggleGodView();
   if (k === 'p' && gameStarted && !gameWon) toggleAutoPlay();
@@ -6816,12 +7080,17 @@ canvas.addEventListener('mousedown', (e) => {
 canvas.addEventListener('click', () => {
   if (gameStarted && !isMobile && !mouseLocked && !paused) safeRequestPointerLock();
 });
-document.addEventListener('pointerlockchange', () => { mouseLocked = document.pointerLockElement === canvas; });
+document.addEventListener('pointerlockchange', () => {
+  const nowLocked = document.pointerLockElement === canvas;
+  if (!mouseLocked && nowLocked) lockEngageT = performance.now();  // false→true 轉變瞬間記錄時間
+  mouseLocked = nowLocked;
+});
 document.addEventListener('pointerlockerror', () => { /* 靜默降級：玩家可再點擊畫面重試 */ });
 // 合併的 mousemove 監聽：轉向 + 中斷自動遊玩
 document.addEventListener('mousemove', (e) => {
   if (!mouseLocked || !gameStarted || paused) return;
-  if (Math.abs(e.movementX) > 2 && autoPlay) stopAutoPlay();
+  // 鎖定後 1.5 秒寬限期：過濾 Chromium pointer lock 啟動瞬間的合成 mousemove 大跳動，避免誤停自動遊玩
+  if (Math.abs(e.movementX) > 2 && autoPlay && performance.now() - lockEngageT > 1500) stopAutoPlay();
   player.dir += e.movementX * CONFIG.baseMouseSens * settings.mouseSensitivity;
 });
 
@@ -7034,6 +7303,10 @@ function showWinScreen() {
     // 跨區成就：未使用火把通關 / 雨天通關（unlockAchievement 對未定義 id 有防護）
     if (!runTorchUsed) unlockAchievement('torch_off_win');
     if (settings.weather === 'rain') unlockAchievement('rain_win');
+    // 連勝成就（recordRunEnd(true) 已先遞增 winStark，此處依最新連勝數解鎖）
+    if (stats.winStreak >= 5) unlockAchievement('win_streak5');
+    if (stats.winStreak >= 10) unlockAchievement('win_streak10');
+    if (stats.winStreak >= 20) unlockAchievement('win_streak20');
     // 記錄最高等級
     stats.highestLevel = Math.max(stats.highestLevel || 1, highestLevelEver);
     saveStats();
@@ -7106,6 +7379,15 @@ function resetGameState() {
   buffs.speed = 0;
   buffs.invincible = 0;
   checkDoors._toastCd = 0;
+  // 跨局狀態清理：蹲下指示燈 / 揭露計時器 / 自動遊玩旗標 / 射擊冷卻 / 戰鬥鎖
+  crouching = false;
+  document.body.classList.remove('crouching');
+  revealTimer = 0;
+  lightningRevealT = 0;
+  pendingReplann = false;
+  lastReplannTime = 0;
+  shootCooldown = 0;
+  combatLockT = 0;
   // 重置新增系統
   runXP.level = 1; runXP.xp = 0; runXP.pending = 0; runXP.meleeBonus = 0;
   highestLevelThisRun = 1;
@@ -7138,7 +7420,8 @@ function resetGameState() {
     generateItems();
   }
   teleporterCooldown = 0;
-  teleporters = []; // 清除自訂地圖殘留的傳送點，避免混入隨機模式
+  // 僅隨機模式才清空傳送點；自訂地圖已由 spawnCustomEntityActors() 塞入成對傳送點，不可清空
+  if (!useCustom) teleporters = [];
   particles.length = 0;
   bobPhase = 0; bobOffset = 0;
   shakeTime = 0;
@@ -7287,6 +7570,8 @@ function syncSettingsUI() {
   document.getElementById('set-daynight').value = settings.dayNightCycle ? 'on' : 'off';
   document.getElementById('set-autoquality').value = settings.autoQuality ? 'on' : 'off';
   document.getElementById('set-learning').value = settings.learningMode ? 'on' : 'off';
+  document.getElementById('set-toastduration').value = String(settings.toastDuration || 1500);
+  document.getElementById('set-screeneffects').value = (settings.screenEffects !== false) ? 'on' : 'off';
   // 移動端不開放渲染品質
   document.getElementById('quality-row').style.display = isMobile ? 'none' : 'flex';
   // 粒子密度 UI 由 UI 代理建立，存在才同步
@@ -7416,7 +7701,7 @@ function syncMapSizeSelect() {
 }
 function pushHistory() {
   editor.undoStack.push(editorSnapshot());
-  if (editor.undoStack.length > 50) editor.undoStack.shift();
+  if (editor.undoStack.length > 100) editor.undoStack.shift();
   editor.redoStack = [];
   updateHistoryButtons();
 }
@@ -7463,14 +7748,25 @@ function updateEditorStats() {
       }
     }
     const dist = Math.abs(editor.start.x - editor.end.x) + Math.abs(editor.start.y - editor.end.y);
-    const entCount = (editor.entities || []).length;
+    const ents = editor.entities || [];
+    const entCount = ents.length;
     let reach = '是';
     try {
       const ok = isEditorMapReachable(editor.map, editor.cols, editor.rows,
         editor.start.x, editor.start.y, editor.end.x, editor.end.y);
       reach = ok ? '是' : '否';
     } catch (e) { reach = '未知'; }
-    el.textContent = `牆 ${walls}｜空地 ${empty}｜起訖距離 ${dist}｜實體 ${entCount}｜可達：${reach}`;
+    // Bug1：統計門 vs 鑰匙；Feature7：傳送點必須成對
+    let doorCount = 0;
+    for (let y = 0; y < editor.rows; y++)
+      for (let x = 0; x < editor.cols; x++)
+        if (editor.map[y][x] === TILE_DOOR) doorCount++;
+    const keyCount = ents.filter(e => e.type === 'key').length;
+    const teleCount = ents.filter(e => e.type === 'tele').length;
+    let warn = '';
+    if (doorCount > keyCount) warn += `　<span style="color:#f66;">警告：鎖門 ${doorCount} 個但鑰匙僅 ${keyCount} 把</span>`;
+    if (teleCount % 2 === 1) warn += `　<span style="color:#f66;">警告：傳送點 ${teleCount} 個（奇數，無法成對）</span>`;
+    el.innerHTML = `牆 ${walls}｜空地 ${empty}｜起訖距離 ${dist}｜實體 ${entCount}｜可達：${reach}${warn}`;
   } catch (e) {
     el.textContent = '地圖統計：計算錯誤';
   }
@@ -7515,11 +7811,11 @@ function loadCustomMap() {
   } catch (e) { return null; }
 }
 
-// 儲存自訂地圖到 localStorage
+// 儲存自訂地圖到 localStorage（version: 2；無 version 欄位的舊檔視為 v1 直接相容）
 function saveCustomMap(mapData, start, end, entities) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      version: 1, cols: mapData[0].length, rows: mapData.length,
+      version: 2, cols: mapData[0].length, rows: mapData.length,
       map: mapData, start, end, entities: entities || [],
     }));
     // 跨區成就 editor_5maps：累計儲存自訂地圖（unlockAchievement 對未定義 id 有防護）
@@ -7527,7 +7823,10 @@ function saveCustomMap(mapData, start, end, entities) {
     saveStats();
     if (stats.editorMapsSaved >= 5) unlockAchievement('editor_5maps');
     return true;
-  } catch (e) { return false; }
+  } catch (e) {
+    showToast('儲存失敗：瀏覽器儲存空間已滿');
+    return false;
+  }
 }
 
 // 應用地圖到遊戲
@@ -7608,6 +7907,16 @@ function renderEditor() {
         editorCtx.fillRect(px, py, cs, cs);
         editorCtx.fillStyle = '#a75';
         editorCtx.fillRect(px + 1, py + 1, cs - 2, cs - 2);
+      } else if (cell === TILE_BARS) {
+        // 欄杆：深色底 + 垂直金屬條
+        editorCtx.fillStyle = '#2a2a35';
+        editorCtx.fillRect(px, py, cs, cs);
+        editorCtx.fillStyle = '#9ab0c8';
+        const barsCount = Math.max(2, Math.floor(cs / 6));
+        for (let b = 1; b <= barsCount; b++) {
+          const bx = px + (cs * b) / (barsCount + 1);
+          editorCtx.fillRect(bx - Math.max(1, cs * 0.06), py + 1, Math.max(2, cs * 0.12), cs - 2);
+        }
       } else {
         // 空地
         editorCtx.fillStyle = '#15151f';
@@ -7659,12 +7968,13 @@ function renderEditor() {
     const px = en.x * cs, py = en.y * cs;
     const cx = px + cs / 2, cy = py + cs / 2;
     if (en.type === 'enemy') {
-      editorCtx.fillStyle = en.enemyType === 'chaser' ? '#f44' : '#8c4';
+      const ec = { chaser:'#f44', shooter:'#f88', tank:'#a84', swarm:'#ee4', splitter:'#4e4', boss:'#f0f', bomber:'#fa4', sentinel:'#4af' };
+      editorCtx.fillStyle = ec[en.enemyType] || '#8c4';
       editorCtx.beginPath();
       editorCtx.arc(cx, cy, cs * 0.32, 0, Math.PI * 2);
       editorCtx.fill();
     } else if (en.type === 'item') {
-      const colors = { health: '#f55', speed: '#5af', shield: '#cdf', star: '#fd8', random: '#fa0' };
+      const colors = { health:'#f55', speed:'#5af', shield:'#cdf', star:'#fd8', crystal:'#5cf', xpgem:'#fd6', maxup:'#f6a', reveal:'#8f8', random:'#fa0' };
       editorCtx.fillStyle = colors[en.itemType] || '#fa0';
       editorCtx.fillRect(px + cs*0.25, py + cs*0.25, cs*0.5, cs*0.5);
     } else if (en.type === 'key') {
@@ -7825,6 +8135,10 @@ function applyTool(cell, erase) {
     editor.map[y][x] = TILE_DOOR;
     return;
   }
+  if (editor.tool === 'bars') {
+    editor.map[y][x] = TILE_BARS;
+    return;
+  }
 
   // 牆/擦除：依筆刷大小/形狀以當前格為中心
   const half = Math.floor(editor.brushSize / 2);
@@ -7881,16 +8195,29 @@ function updatePropsPanel() {
   panel.classList.add('on');
   let html = `<div>選中實體：${en.type} (${en.x},${en.y})</div>`;
   if (en.type === 'enemy') {
+    const opt = (val, label) => `<option value="${val}" ${en.enemyType===val?'selected':''}>${label}</option>`;
     html += `<div>類型 <select id="prop-enemy">
-      <option value="patrol" ${en.enemyType==='patrol'?'selected':''}>巡邏者</option>
-      <option value="chaser" ${en.enemyType==='chaser'?'selected':''}>追獵者</option></select></div>`;
+      ${opt('patrol','巡邏者')}
+      ${opt('chaser','追獵者')}
+      ${opt('shooter','射擊者')}
+      ${opt('tank','坦克')}
+      ${opt('swarm','蜂群')}
+      ${opt('splitter','分裂體')}
+      ${opt('boss','首領')}
+      ${opt('bomber','轟炸者')}
+      ${opt('sentinel','哨兵')}</select></div>`;
   } else if (en.type === 'item') {
+    const opt = (val, label) => `<option value="${val}" ${en.itemType===val?'selected':''}>${label}</option>`;
     html += `<div>類型 <select id="prop-item">
-      <option value="random" ${en.itemType==='random'?'selected':''}>隨機</option>
-      <option value="health" ${en.itemType==='health'?'selected':''}>回復</option>
-      <option value="speed" ${en.itemType==='speed'?'selected':''}>加速</option>
-      <option value="shield" ${en.itemType==='shield'?'selected':''}>護盾</option>
-      <option value="star" ${en.itemType==='star'?'selected':''}>無敵</option></select></div>`;
+      ${opt('random','隨機')}
+      ${opt('health','回復')}
+      ${opt('speed','加速')}
+      ${opt('shield','護盾')}
+      ${opt('star','無敵')}
+      ${opt('crystal','能量彈')}
+      ${opt('xpgem','經驗寶石')}
+      ${opt('maxup','上限強化')}
+      ${opt('reveal','地圖卷軸')}</select></div>`;
   }
   if (en.type === 'tele') {
     const idx = editor.entities.indexOf(en);
@@ -8326,18 +8653,25 @@ function loadSaveSlots() {
   catch (e) { return {}; }
 }
 function writeSaveSlots(obj) {
-  try { localStorage.setItem(SAVE_SLOT_KEY, JSON.stringify(obj)); } catch (e) {}
+  try {
+    obj.__version = 2; // 存檔槽結構版本；無 __version 的舊檔視為 v1 直接相容
+    localStorage.setItem(SAVE_SLOT_KEY, JSON.stringify(obj));
+  } catch (e) {
+    showToast('儲存失敗：瀏覽器儲存空間已滿');
+  }
 }
-function editorMapData() {
+function editorMapData(name) {
   return {
     cols: editor.cols, rows: editor.rows,
     map: editor.map, start: editor.start, end: editor.end,
     entities: editor.entities, savedAt: Date.now(),
+    name: name || null,
   };
 }
 function saveToSlot(n) {
   const slots = loadSaveSlots();
-  slots['slot' + n] = editorMapData();
+  const prev = slots['slot' + n];
+  slots['slot' + n] = editorMapData(prev && prev.name);
   writeSaveSlots(slots);
   // 跨區成就 editor_5maps：累計儲存地圖（unlockAchievement 對未定義 id 有防護）
   stats.editorMapsSaved = (stats.editorMapsSaved || 0) + 1;
@@ -8361,6 +8695,8 @@ function loadFromSlot(n) {
   editor.entities = (data.entities || []).map(e => ({ ...e }));
   editor.selectedEntity = null; editor.selection = null;
   calcCellSize();
+  syncMapSizeSelect();
+  updateEditorStats();
   showToastMsg('已載入存檔槽 ' + n);
 }
 function clearSlot(n) {
@@ -8368,6 +8704,33 @@ function clearSlot(n) {
   delete slots['slot' + n];
   writeSaveSlots(slots);
   showToastMsg('已清除存檔槽 ' + n);
+}
+function renameSlot(n) {
+  const slots = loadSaveSlots();
+  const d = slots['slot' + n];
+  if (!d) { showToastMsg('存檔槽 ' + n + ' 為空'); return; }
+  const cur = (d && d.name) || ('存檔槽 ' + n);
+  const name = prompt('輸入存檔槽 ' + n + ' 的名稱：', cur);
+  if (name === null) return;
+  d.name = name.trim() || null;
+  writeSaveSlots(slots);
+  showToastMsg('已重新命名存檔槽 ' + n);
+  promptSaveSlot();
+}
+function copySlot(n) {
+  const slots = loadSaveSlots();
+  const d = slots['slot' + n];
+  if (!d) { showToastMsg('存檔槽 ' + n + ' 為空'); return; }
+  const t = prompt('要把存檔槽 ' + n + ' 複製到哪個槽？（輸入槽號 1-3）', String(n === 1 ? 2 : 1));
+  if (t === null) return;
+  const tn = parseInt(t, 10);
+  if (!Number.isInteger(tn) || tn < 1 || tn > 3) { showToastMsg('槽號必須是 1-3'); return; }
+  if (tn === n) { showToastMsg('不能複製到自己'); return; }
+  slots['slot' + tn] = JSON.parse(JSON.stringify(d));
+  slots['slot' + tn].savedAt = Date.now();
+  writeSaveSlots(slots);
+  showToastMsg('已把存檔槽 ' + n + ' 複製到存檔槽 ' + tn);
+  promptSaveSlot();
 }
 // 編輯器通用彈窗控制
 const editorModal = document.getElementById('editor-modal');
@@ -8386,15 +8749,19 @@ function promptSaveSlot() {
   let html = '';
   for (let n = 1; n <= 3; n++) {
     const d = slots['slot' + n];
+    const label = (d && d.name) ? `${d.name}` : (`槽${n}`);
     const info = d
-      ? `<b>槽${n}</b>　${d.cols}x${d.rows}　<span style="color:#9ab;">${new Date(d.savedAt).toLocaleString('zh-TW')}</span>`
-      : `<b>槽${n}</b>　<span class="empty">（空）</span>`;
+      ? `<b>${label}</b>　${d.cols}x${d.rows}　<span style="color:#9ab;">${new Date(d.savedAt).toLocaleString('zh-TW')}</span>`
+      : `<b>${label}</b>　<span class="empty">（空）</span>`;
+    const dis = d ? '' : 'disabled style="opacity:0.4;cursor:default;"';
     html += `<div class="em-slot-row">
       <div class="slot-info">${info}</div>
       <div class="em-slot-actions">
         <button data-act="save" data-n="${n}">儲存</button>
-        <button data-act="load" data-n="${n}" ${d?'':'disabled style="opacity:0.4;cursor:default;"'}>載入</button>
-        <button class="danger" data-act="clear" data-n="${n}" ${d?'':'disabled style="opacity:0.4;cursor:default;"'}>清除</button>
+        <button data-act="load" data-n="${n}" ${dis}>載入</button>
+        <button data-act="rename" data-n="${n}" ${dis}>改名</button>
+        <button data-act="copy" data-n="${n}" ${dis}>複製</button>
+        <button class="danger" data-act="clear" data-n="${n}" ${dis}>清除</button>
       </div>
     </div>`;
   }
@@ -8405,6 +8772,8 @@ function promptSaveSlot() {
       const act = btn.dataset.act;
       if (act === 'save') { saveToSlot(n); closeEditorModal(); }
       else if (act === 'load') { loadFromSlot(n); closeEditorModal(); }
+      else if (act === 'rename') { renameSlot(n); }
+      else if (act === 'copy') { copySlot(n); }
       else if (act === 'clear') {
         if (confirm(`確定要清除存檔槽 ${n} 的地圖嗎？此動作無法復原。`)) {
           clearSlot(n);
@@ -8598,9 +8967,23 @@ function startGameFromEditor(test) {
   if (!isEditorMapReachable(editor.map, editor.cols, editor.rows, editor.start.x, editor.start.y, editor.end.x, editor.end.y)) {
     alert('起點到終點之間沒有可通行的路徑！\n請調整地圖後再儲存。'); return false;
   }
+  // Bug1：BFS 把鎖門視為可走，但實際遊玩需要鑰匙；鑰匙不足時警告但仍允許繼續
+  let doorCnt = 0;
+  for (let y = 0; y < editor.rows; y++)
+    for (let x = 0; x < editor.cols; x++)
+      if (editor.map[y][x] === TILE_DOOR) doorCnt++;
+  const keyCnt = (editor.entities || []).filter(e => e.type === 'key').length;
+  if (doorCnt > keyCnt) {
+    alert(`警告：地圖中有 ${doorCnt} 個鎖門，但只放了 ${keyCnt} 把鑰匙。\n若路徑需要開門，實際遊玩時可能會卡死。`);
+  }
+  const teleOdd = (editor.entities || []).filter(e => e.type === 'tele').length % 2 === 1;
+  if (teleOdd) alert('警告：傳送點數量為奇數，最後一個不會成對。');
   const mapData = editor.map.map(row => [...row]);
   if (!test) {
-    saveCustomMap(mapData, editor.start, editor.end, editor.entities);
+    const ok = saveCustomMap(mapData, editor.start, editor.end, editor.entities);
+    if (ok === false) {
+      showToast('儲存失敗：瀏覽器儲存空間已滿，本次將以測試模式進行');
+    }
   }
   applyMapToGame(mapData, editor.start, editor.end);
   useRandomMaze = false;
@@ -9016,6 +9399,9 @@ const ACH_DEFS = [
   { id: 'editor_5maps',  name: '地圖設計師', desc: '累計儲存 5 張自訂地圖', icon: '圖', target: 5, rarity: 'normal' },
   { id: 'dash_total_50', name: '衝刺達人', desc: '累計衝刺 50 次', icon: '速', target: 50, rarity: 'normal' },
   { id: 'easter_egg',    name: '彩蛋獵人', desc: '發現隱藏指令', icon: '秘', rarity: 'hidden' },
+  { id: 'win_streak5',   name: '連勝勇士', desc: '連續通關 5 次', icon: '伍' },
+  { id: 'win_streak10',  name: '不敗傳說', desc: '連續通關 10 次', icon: '拾' },
+  { id: 'win_streak20',  name: '迷宮主宰', desc: '連續通關 20 次', icon: '廿' },
 ];
 
 let achievements = {};
@@ -9136,10 +9522,12 @@ function recordRunEnd(won) {
   if (won) {
     stats.totalWins++;
     stats.winStreak++;
+    stats.deathStreak = 0;
     if (stats.winStreak >= 3) unlockAchievement('win_streak3');
   } else {
     stats.totalDeaths++;
     stats.winStreak = 0;
+    stats.deathStreak = (stats.deathStreak || 0) + 1;
     unlockAchievement('first_death');
   }
   const sizeKey = useRandomMaze ? selectedMazeSize : 'custom';
@@ -9168,6 +9556,8 @@ const weatherCtx = weatherCanvas.getContext('2d');
 const fogOverlay = document.getElementById('fog-overlay');
 const lightningFlash = document.getElementById('lightning-flash');
 let rainDrops = [];
+let snowFlakes = [];
+let sandMotes = [];
 let lightningTimer = 0;
 let lightningFlashT = 0;
 let rainNoiseNode = null;
@@ -9193,6 +9583,31 @@ function newDrop(init) {
     speed: 600 + Math.random() * 400,
     drift: 40 + Math.random() * 60,
   };
+}
+function initSnow() {
+  snowFlakes = [];
+  for (let i = 0; i < 140; i++) {
+    snowFlakes.push({
+      x: Math.random() * weatherCanvas.width,
+      y: Math.random() * weatherCanvas.height,
+      size: 1.5 + Math.random() * 2.5,
+      speed: 30 + Math.random() * 40,
+      drift: 10 + Math.random() * 20,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+function initSand() {
+  sandMotes = [];
+  for (let i = 0; i < 200; i++) {
+    sandMotes.push({
+      x: Math.random() * weatherCanvas.width,
+      y: Math.random() * weatherCanvas.height,
+      size: 1 + Math.random() * 3,
+      speed: 180 + Math.random() * 220, // 斜向吹
+      vy: -20 + Math.random() * 40,
+    });
+  }
 }
 function startRainSound() {
   if (!audioCtx || rainNoiseNode) return;
@@ -9250,6 +9665,16 @@ function applyWeather() {
   } else if (w === 'storm') {
     CONFIG.fogDistance = 14;
     fogOverlay.style.opacity = '0.15';
+  } else if (w === 'snow') {
+    // 雪：冷色薄霧，能見度略降
+    CONFIG.fogDistance = Math.min(CONFIG.fogDistance, 12);
+    fogOverlay.style.opacity = '0.25';
+    initSnow();
+  } else if (w === 'sand') {
+    // 沙塵暴：暖色濃霧，能見度明顯下降
+    CONFIG.fogDistance = 8;
+    fogOverlay.style.opacity = '0.45';
+    initSand();
   } else {
     // clear / rain：維持難度基準，不動 fogDistance
     fogOverlay.style.opacity = '0';
@@ -9265,31 +9690,58 @@ function applyWeather() {
 function updateWeather(dt) {
   if (paused) return;
   const w = settings.weather;
-  if (w !== 'rain' && w !== 'storm') return;
   weatherCtx.clearRect(0, 0, weatherCanvas.width, weatherCanvas.height);
-  weatherCtx.strokeStyle = 'rgba(174, 194, 224, 0.5)';
-  weatherCtx.lineWidth = 1.2;
-  weatherCtx.beginPath();
-  const wind = w === 'storm' ? 1.5 : 0.5;
-  for (const d of rainDrops) {
-    d.y += d.speed * dt;
-    d.x += d.drift * wind * dt;
-    weatherCtx.moveTo(d.x, d.y);
-    weatherCtx.lineTo(d.x - d.drift * 0.03 * wind, d.y - d.len);
-    if (d.y > weatherCanvas.height - 5) {
-      weatherCtx.moveTo(d.x - 3, weatherCanvas.height - 3);
-      weatherCtx.lineTo(d.x + 3, weatherCanvas.height - 3);
+  if (w === 'rain' || w === 'storm') {
+    weatherCtx.strokeStyle = 'rgba(174, 194, 224, 0.5)';
+    weatherCtx.lineWidth = 1.2;
+    weatherCtx.beginPath();
+    const wind = w === 'storm' ? 1.5 : 0.5;
+    for (const d of rainDrops) {
+      d.y += d.speed * dt;
+      d.x += d.drift * wind * dt;
+      weatherCtx.moveTo(d.x, d.y);
+      weatherCtx.lineTo(d.x - d.drift * 0.03 * wind, d.y - d.len);
+      if (d.y > weatherCanvas.height - 5) {
+        weatherCtx.moveTo(d.x - 3, weatherCanvas.height - 3);
+        weatherCtx.lineTo(d.x + 3, weatherCanvas.height - 3);
+      }
+      if (d.y > weatherCanvas.height) Object.assign(d, newDrop(false));
     }
-    if (d.y > weatherCanvas.height) Object.assign(d, newDrop(false));
-  }
-  weatherCtx.stroke();
-  if (w === 'storm') {
-    lightningTimer -= dt;
-    if (lightningTimer <= 0) {
-      lightningFlashT = 0.25;
-      lightningRevealT = 0.5;   // 閃電瞬間短暫照亮小地圖敵人
-      lightningTimer = 3 + Math.random() * 6;
-      playThunder();
+    weatherCtx.stroke();
+    if (w === 'storm') {
+      lightningTimer -= dt;
+      if (lightningTimer <= 0) {
+        lightningFlashT = 0.25;
+        lightningRevealT = 0.5;   // 閃電瞬間短暫照亮小地圖敵人
+        lightningTimer = 3 + Math.random() * 6;
+        playThunder();
+      }
+    }
+  } else if (w === 'snow') {
+    // 冷色薄疊層 + 白色緩慢下落雪花（左右飄動）
+    weatherCtx.fillStyle = 'rgba(150, 180, 220, 0.06)';
+    weatherCtx.fillRect(0, 0, weatherCanvas.width, weatherCanvas.height);
+    weatherCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    for (const s of snowFlakes) {
+      s.y += s.speed * dt;
+      s.x += s.drift * dt + Math.sin(s.y * 0.02 + s.phase) * 0.4;
+      if (s.y > weatherCanvas.height) { s.y = -5; s.x = Math.random() * weatherCanvas.width; }
+      weatherCtx.beginPath();
+      weatherCtx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      weatherCtx.fill();
+    }
+  } else if (w === 'sand') {
+    // 暖色疊層 + 斜向飛馳的塵粒（能見度下降）
+    weatherCtx.fillStyle = 'rgba(200, 150, 80, 0.10)';
+    weatherCtx.fillRect(0, 0, weatherCanvas.width, weatherCanvas.height);
+    weatherCtx.fillStyle = 'rgba(215, 185, 120, 0.55)';
+    for (const m of sandMotes) {
+      m.x += m.speed * dt;
+      m.y += m.vy * dt;
+      if (m.x > weatherCanvas.width) { m.x = -5; m.y = Math.random() * weatherCanvas.height; }
+      if (m.y > weatherCanvas.height) m.y = 0;
+      if (m.y < 0) m.y = weatherCanvas.height;
+      weatherCtx.fillRect(m.x, m.y, m.size, m.size);
     }
   }
   if (lightningFlashT > 0) {
@@ -9385,6 +9837,8 @@ function drawEnemyLights() {
     else if (e.type === 'tank') { rC = 120; gC = 120; bC = 130; intensity = 0.08; }
     else if (e.type === 'swarm') { rC = 255; gC = 150; bC = 40; intensity = 0.08; }
     else if (e.type === 'splitter') { rC = 80; gC = 230; bC = 110; intensity = 0.10; }
+    else if (e.type === 'bomber') { rC = e.lit ? 255 : 200; gC = e.lit ? 60 : 120; bC = 30; intensity = e.lit ? 0.22 : 0.08; }
+    else if (e.type === 'sentinel') { rC = 255; gC = 220; bC = 90; intensity = 0.12; }
     else if (e.type === 'boss') { rC = 255; gC = 40; bC = 40; intensity = 0.25; }
     const glow = getEnemyGlowCanvas(rC, gC, bC, intensity);
     ctx.drawImage(glow, screenX - radius, screenY - radius, radius * 2, radius * 2);
@@ -9469,6 +9923,7 @@ function applyAccessibility() {
   document.body.classList.toggle('font-large', settings.fontSize === 'large');
   document.body.classList.toggle('reduce-motion', settings.reduceMotion);
   document.body.classList.toggle('high-contrast', settings.highContrast);
+  document.body.classList.toggle('no-screen-effects', settings.screenEffects === false);
 }
 
 // ============================================================
@@ -9605,6 +10060,17 @@ setHighContrast.addEventListener('change', () => {
   saveSettings();
   applyAccessibility();
 });
+// 提示訊息時長
+document.getElementById('set-toastduration').addEventListener('change', (e) => {
+  settings.toastDuration = parseInt(e.target.value, 10) || 1500;
+  saveSettings();
+});
+// 螢幕特效開關（即時生效）
+document.getElementById('set-screeneffects').addEventListener('change', (e) => {
+  settings.screenEffects = (e.target.value === 'on');
+  saveSettings();
+  applyAccessibility();
+});
 applyAccessibility();
 
 // FPS 顯示開關（即時生效）
@@ -9718,11 +10184,11 @@ function buildTutorialRows() {
       '<div><span class="key">右側滑動</span> 轉向</div>' +
       '<div><span class="key">擊</span> 攻擊 &nbsp; <span class="key">閃</span> 衝刺 &nbsp; <span class="key">彈</span> 能量彈</div>' +
       '<div><span class="key">速</span> 奔跑 &nbsp; <span class="key">地圖</span> 小地圖 &nbsp; <span class="key">暫停</span> 暫停</div>' +
-      '<div><span class="key">自動</span> 自動尋路通關</div>'
+      '<div><span class="key">自動</span> 自動尋路通關 &nbsp; <span class="key">神</span> 上帝視角</div>'
     : '<div><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> 移動 &nbsp; <span class="key">Shift</span> 奔跑</div>' +
       '<div><span class="key">滑鼠</span> 轉向 &nbsp; <span class="key">空白</span>/<span class="key">左鍵</span> 攻擊</div>' +
-      '<div><span class="key">Q</span> 或 雙擊<span class="key">Shift</span> 衝刺 &nbsp; <span class="key">E</span> 發射能量彈</div>' +
-      '<div><span class="key">ESC</span> 暫停 &nbsp; <span class="key">M</span> 小地圖 &nbsp; <span class="key">F</span> 手電筒 &nbsp; <span class="key">P</span> 自動遊玩</div>';
+      '<div><span class="key">Q</span> 或 雙擊<span class="key">Shift</span> 衝刺 &nbsp; <span class="key">E</span> 發射能量彈 &nbsp; <span class="key">C</span> 蹲下</div>' +
+      '<div><span class="key">G</span> 上帝視角 &nbsp; <span class="key">ESC</span> 暫停 &nbsp; <span class="key">M</span> 小地圖 &nbsp; <span class="key">F</span> 手電筒 &nbsp; <span class="key">P</span> 自動遊玩</div>';
 }
 function maybeShowTutorial() {
   let done = false;
