@@ -2157,12 +2157,22 @@
       <button class="size-btn" data-size="colossal">浩瀚</button>
       <button class="size-btn" data-size="limitless">無邊</button>
     </div>
-    <div class="size-label">敵人數量</div>
+    <div class="size-label">怪物模式</div>
+    <div class="size-row" id="monster-row">
+      <button class="size-btn active" data-monster="on">有怪</button>
+      <button class="size-btn" data-monster="none">無怪</button>
+    </div>
+    <div class="size-label" id="enemy-label">敵人數量</div>
     <div class="size-row" id="enemy-row">
       <button class="size-btn" data-enemy="none">無</button>
       <button class="size-btn" data-enemy="few">少量</button>
       <button class="size-btn active" data-enemy="normal">普通</button>
       <button class="size-btn" data-enemy="many">大量</button>
+    </div>
+    <div class="size-label" id="boss-label">Boss</div>
+    <div class="size-row" id="boss-row">
+      <button class="size-btn active" data-boss="off">無 Boss</button>
+      <button class="size-btn" data-boss="on">有 Boss</button>
     </div>
     <div class="size-label">天氣</div>
     <div class="weather-row" id="weather-row">
@@ -2516,6 +2526,8 @@ const settings = {
   soundOn: true,           // 音效開關
   difficulty: 'normal',    // easy / normal / hard / nightmare
   enemyDensity: 'normal',  // none / few / normal / many
+  monsterMode: 'on',       // on / none：有怪模式 / 無怪模式
+  bossMode: 'off',         // on / off：是否出現 Boss（僅有怪模式生效）
   weather: 'clear',         // clear / rain / fog / storm
   fontSize: 'medium',       // small / medium / large
   colorblind: false,
@@ -5388,6 +5400,8 @@ function makeEnemyOfType(type, c) {
 function generateEnemies() {
   enemies = [];
   bossRef = null;
+  // 無怪模式：不出現任何敵人與 Boss
+  if (settings.monsterMode === 'none') return;
   // 動態難度：敵人數量乘數（diffAdj.countMult）
   const mult = (ENEMY_COUNT[settings.enemyDensity] ?? 1) * ((diffAdj && diffAdj.countMult) || 1);
   if (mult <= 0) return;
@@ -5422,10 +5436,8 @@ function generateEnemies() {
     const c = candidates[i];
     enemies.push(makeEnemyOfType(type, c));
   }
-  // Boss：超大迷宮(huge 以上) 或隨機 25% 機率（中等以上迷宮）
-  const sizeOrder = ['micro','tiny','small','smallmid','medium','midlarge','large','largeplus','huge','enormous','gigantic','colossal','limitless'];
-  const sizeIdx = sizeOrder.indexOf(selectedMazeSize);
-  const wantBoss = sizeIdx >= sizeOrder.indexOf('huge') || (sizeIdx >= sizeOrder.indexOf('medium') && Math.random() < 0.25);
+  // Boss：由「有 Boss」設定決定（僅有怪模式會到這裡）
+  const wantBoss = settings.bossMode === 'on';
   if (wantBoss && candidates.length > 0) {
     const bc = candidates[candidates.length - 1];
     const boss = makeEnemyOfType('patrol', bc);
@@ -5433,10 +5445,63 @@ function generateEnemies() {
     boss.hp = 300; boss.maxHp = 300;
     boss.speed = 1.2; boss.touchDmg = 25;
     boss.summonT = 5;
+    boss.patrolPath = null; boss.patrolIdx = 0; // 全圖巡邏路徑（延遲初始化）
     enemies.push(boss);
     bossRef = boss;
     bossWarnPending = true;   // 進入遊戲後短暫延遲再顯示警告
     bossWarnTimer = 2.0;
+  }
+}
+
+// Boss 全圖巡邏路徑：沿地圖周邊內縮取可行走格，不足時補隨機格
+function makeBossPatrolPath() {
+  const pts = [];
+  const step = Math.max(2, Math.floor(Math.min(MAP_W, MAP_H) / 4));
+  for (let i = 1; i < MAP_W - 1; i += step) {
+    if (MAP[2] && MAP[2][i] === 0) pts.push({ x: i + 0.5, y: 2.5 });
+    if (MAP[MAP_H - 3] && MAP[MAP_H - 3][i] === 0) pts.push({ x: i + 0.5, y: MAP_H - 2.5 });
+  }
+  for (let j = 1; j < MAP_H - 1; j += step) {
+    if (MAP[j] && MAP[j][2] === 0) pts.push({ x: 2.5, y: j + 0.5 });
+    if (MAP[j] && MAP[j][MAP_W - 3] === 0) pts.push({ x: MAP_W - 2.5, y: j + 0.5 });
+  }
+  if (pts.length < 4) {
+    const cands = collectEmptyCandidates(0);
+    for (let k = 0; k < cands.length && pts.length < 6; k++) {
+      const c = cands[k];
+      if (!pts.some(p => Math.abs(p.x - (c.x + 0.5)) < 1.5 && Math.abs(p.y - (c.y + 0.5)) < 1.5)) {
+        pts.push({ x: c.x + 0.5, y: c.y + 0.5 });
+      }
+    }
+  }
+  return pts.length >= 2 ? pts : null;
+}
+
+// Boss 全圖巡邏移動：依路徑迴圈繞行地圖
+function bossPatrolMove(e, dt) {
+  if (!e.patrolPath || e.patrolPath.length < 2) {
+    e.patrolPath = makeBossPatrolPath();
+    e.patrolIdx = 0;
+    if (!e.patrolPath) return;
+  }
+  const tgt = e.patrolPath[e.patrolIdx % e.patrolPath.length];
+  const dx = tgt.x - e.x, dy = tgt.y - e.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 0.8) { e.patrolIdx++; return; }
+  e.dir = Math.atan2(dy, dx);
+  const isNightNow = dayPhaseName === '夜晚';
+  const spd = e.speed * 0.85 * (isNightNow ? 1.25 : 1);
+  let movedAny = false;
+  const mvx = Math.cos(e.dir) * spd * dt;
+  const mvy = Math.sin(e.dir) * spd * dt;
+  if (enemyCanMove(e.x + mvx, e.y)) { e.x += mvx; movedAny = true; }
+  if (enemyCanMove(e.x, e.y + mvy)) { e.y += mvy; movedAny = true; }
+  if (!movedAny) {
+    // 卡住（出生點可能是死巷）：累計卡住時間，超過 0.6 秒換下一個路點
+    e.patrolStuckT = (e.patrolStuckT || 0) + dt;
+    if (e.patrolStuckT > 0.6) { e.patrolStuckT = 0; e.patrolIdx++; }
+  } else {
+    e.patrolStuckT = 0;
   }
 }
 
@@ -5493,7 +5558,7 @@ function spawnCustomEntityActors() {
       // 依屬性面板選擇的敵人類型生成；boss/bomber/sentinel 等由玩法端 makeEnemyOfType 支援
       const et = e.enemyType || 'patrol';
       const actor = makeEnemyOfType(et, { x: e.x, y: e.y });
-      if (et === 'boss') { actor.type = 'boss'; actor.hp = 300; actor.maxHp = 300; actor.speed = 1.2; actor.touchDmg = 25; actor.summonT = 5; bossRef = actor; }
+      if (et === 'boss') { actor.type = 'boss'; actor.hp = 300; actor.maxHp = 300; actor.speed = 1.2; actor.touchDmg = 25; actor.summonT = 5; actor.patrolPath = null; actor.patrolIdx = 0; bossRef = actor; }
       enemies.push(actor);
     } else if (e.type === 'item' && isWalkable(mapAt(e.x, e.y))) {
       const types = ['health', 'speed', 'shield', 'star'];
@@ -6005,15 +6070,23 @@ function updateEnemies(dt) {
           }
         }
       }
-      // Boss 永遠追擊
-      e.state = 'chase';
-      const ang = Math.atan2(dy, dx);
-      const spd = e.speed * spdMult * nightMult;
-      const mvx = Math.cos(ang) * spd * dt;
-      const mvy = Math.sin(ang) * spd * dt;
-      e.dir = ang;
-      if (enemyCanMove(e.x + mvx, e.y)) e.x += mvx;
-      if (enemyCanMove(e.x, e.y + mvy)) e.y += mvy;
+      // Boss：全圖環繞巡邏，發現玩家（接近且有視線）時才追擊攻擊
+      const bossSee = (isNight ? 13 : 10) * crouchMult; // Boss 偵測範圍
+      const bossCanSee = distToPlayer < bossSee && (distToPlayer < 6 || enemyHasLOS(e.x, e.y, player.x, player.y));
+      if (bossCanSee) {
+        e.state = 'chase';
+        const ang = Math.atan2(dy, dx);
+        const spd = e.speed * spdMult * nightMult;
+        const mvx = Math.cos(ang) * spd * dt;
+        const mvy = Math.sin(ang) * spd * dt;
+        e.dir = ang;
+        if (enemyCanMove(e.x + mvx, e.y)) e.x += mvx;
+        if (enemyCanMove(e.x, e.y + mvy)) e.y += mvy;
+      } else {
+        // 未發現玩家：沿全圖巡邏
+        e.state = 'patrol';
+        bossPatrolMove(e, dt);
+      }
       // 移動後重新算距離再做接觸判定（舊 distToPlayer 是移動前的，會誤判）
       const bossDist = Math.hypot(player.x - e.x, player.y - e.y);
       if (bossDist < 0.7 && e.attackCd <= 0) {
@@ -6146,6 +6219,7 @@ function enemyDeathName(e) {
 // --- 玩家近戰攻擊 ---
 function playerAttack() {
   if (playerDead || gameWon || paused) return;
+  if (settings.monsterMode === 'none') return; // 無怪模式：沒有攻擊方式
   if (attackCooldown > 0) return;
   attackCooldown = 0.4;
   attackAnim = 0.2;
@@ -6283,6 +6357,7 @@ function onBossDefeated(boss) {
 // --- 玩家遠程射擊（能量水晶彈） ---
 function playerShoot() {
   if (playerDead || gameWon || paused) return;
+  if (settings.monsterMode === 'none') return; // 無怪模式：沒有攻擊方式
   if (shootCooldown > 0) return; // 射速限制，避免無限連射
   if (playerAmmo <= 0) { showToast('沒有能量彈！'); return; }
   playerAmmo--;
@@ -7817,6 +7892,49 @@ deathRetryBtn.addEventListener('click', () => {
 deathMenuBtn.addEventListener('click', () => {
   returnToMainMenu();
 });
+
+// 怪物模式選擇（有怪 / 無怪）
+const monsterBtns = document.querySelectorAll('.size-btn[data-monster]');
+const enemyLabel = document.getElementById('enemy-label');
+const enemyRow = document.getElementById('enemy-row');
+const bossLabel = document.getElementById('boss-label');
+const bossRow = document.getElementById('boss-row');
+function syncMonsterUI() {
+  const none = settings.monsterMode === 'none';
+  monsterBtns.forEach(b => b.classList.toggle('active', b.dataset.monster === settings.monsterMode));
+  // 無怪模式：隱藏敵人數量與 Boss 選項
+  if (enemyLabel) enemyLabel.style.display = none ? 'none' : '';
+  if (enemyRow) enemyRow.style.display = none ? 'none' : '';
+  if (bossLabel) bossLabel.style.display = none ? 'none' : '';
+  if (bossRow) bossRow.style.display = none ? 'none' : '';
+}
+monsterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    settings.monsterMode = btn.dataset.monster;
+    saveSettings();
+    syncMonsterUI();
+    // 切回有怪模式時，若敵人密度為「無」則自動改回「普通」，避免有怪卻無怪
+    if (settings.monsterMode === 'on' && settings.enemyDensity === 'none') {
+      settings.enemyDensity = 'normal';
+      enemyBtns.forEach(b => b.classList.toggle('active', b.dataset.enemy === settings.enemyDensity));
+      saveSettings();
+    }
+    initAudio();
+  });
+});
+// Boss 開關選擇（有 / 無）
+const bossBtns = document.querySelectorAll('.size-btn[data-boss]');
+bossBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    settings.bossMode = btn.dataset.boss;
+    saveSettings();
+    bossBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    initAudio();
+  });
+});
+bossBtns.forEach(b => b.classList.toggle('active', b.dataset.boss === settings.bossMode));
+syncMonsterUI();
 
 // 敵人密度選擇
 const enemyBtns = document.querySelectorAll('.size-btn[data-enemy]');
