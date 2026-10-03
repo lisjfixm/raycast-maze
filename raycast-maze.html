@@ -762,7 +762,10 @@
     image-rendering: pixelated;
     border: 1px solid #333;
     background: #0a0e18;
+    touch-action: none;
+    cursor: grab;
   }
+  #god-canvas:active { cursor: grabbing; }
   .god-tip {
     margin-top: 10px;
     color: #8ab;
@@ -772,6 +775,36 @@
     user-select: none;
   }
   .god-tip:hover { color: #cde; }
+  .god-controls {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(15,20,35,0.9);
+    border: 1px solid #3a4a6a;
+    border-radius: 8px;
+    padding: 6px 12px;
+    user-select: none;
+  }
+  .god-btn {
+    background: rgba(68,170,255,0.15);
+    border: 1px solid #4af;
+    color: #cdf;
+    font-size: 15px;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .god-btn:hover { background: rgba(68,170,255,0.3); }
+  #god-reset { width: auto; padding: 0 10px; font-size: 13px; }
+  #god-zoom-label {
+    color: #9ab;
+    font-size: 13px;
+    min-width: 46px;
+    text-align: center;
+  }
   .pause-panel, .settings-panel {
     background: rgba(15,15,25,0.95);
     border: 1px solid #4af;
@@ -2303,10 +2336,16 @@
     </div>
   </div>
 
-  <!-- 上帝視角（2D 俯視全圖） -->
+  <!-- 上帝視角（2D 俯視全圖 / 可縮放 3D 立體） -->
   <div id="god-view" style="display:none;">
     <canvas id="god-canvas"></canvas>
-    <div class="god-tip">上帝視角 — 按 G 或點此關閉</div>
+    <div class="god-controls">
+      <button class="god-btn" id="god-zoom-out" type="button">−</button>
+      <span id="god-zoom-label">100%</span>
+      <button class="god-btn" id="god-zoom-in" type="button">+</button>
+      <button class="god-btn" id="god-reset" type="button">重置</button>
+    </div>
+    <div class="god-tip">上帝視角 — 滾輪／雙指縮放・拖曳移動・按 G 或點此關閉</div>
   </div>
 
   <!-- 地圖編輯器 -->
@@ -2917,8 +2956,11 @@ let bobPhase = 0;         // 晃動相位
 let bobOffset = 0;        // 目前渲染用的垂直偏移（平滑）
 let lastMoveSpeedMag = 0;  // 上幀移動強度
 
-// --- 上帝視角（2D 俯視全圖） ---
+// --- 上帝視角（2D 俯視全圖 / 可縮放 3D 立體） ---
 let godView = false;
+let godViewZoom = 1;        // 1 = 全圖平面；>1 = 等距 3D 立體（放大）
+let godViewPanX = 0;        // 拖曳平移（畫素）
+let godViewPanY = 0;
 
 // --- 螢幕震動 ---
 let shakeTime = 0;        // 剩餘震動時間（秒）
@@ -3154,6 +3196,91 @@ btnGod.addEventListener('touchstart', (e) => {
   toggleGodView();
 }, { passive: false });
 document.querySelector('.god-tip')?.addEventListener('click', () => toggleGodView());
+
+// --- 上帝視角：縮放 / 平移控制 ---
+const godCanvasEl = document.getElementById('god-canvas');
+const godZoomLabel = document.getElementById('god-zoom-label');
+function updateGodZoomUI() {
+  if (godZoomLabel) godZoomLabel.textContent = Math.round(godViewZoom * 100) + '%';
+}
+function godZoomBy(factor, anchorX, anchorY) {
+  const old = godViewZoom;
+  godViewZoom = Math.min(8, Math.max(1, godViewZoom * factor));
+  const ratio = godViewZoom / old;
+  // 以錨點為中心縮放：維持錨點下的世界位置不變
+  const cw = godCanvasEl ? godCanvasEl.width : 800, ch = godCanvasEl ? godCanvasEl.height : 600;
+  const ax = anchorX !== undefined ? anchorX - cw / 2 : 0;
+  const ay = anchorY !== undefined ? anchorY - ch / 2 : 0;
+  godViewPanX = ax - (ax - godViewPanX) * ratio;
+  godViewPanY = ay - (ay - godViewPanY) * ratio;
+  updateGodZoomUI();
+  renderGodView();
+}
+document.getElementById('god-zoom-in').addEventListener('click', () => godZoomBy(1.5));
+document.getElementById('god-zoom-out').addEventListener('click', () => godZoomBy(1 / 1.5));
+document.getElementById('god-reset').addEventListener('click', () => {
+  godViewZoom = 1;
+  godViewPanX = 0;
+  godViewPanY = 0;
+  updateGodZoomUI();
+  renderGodView();
+});
+// 滾輪縮放
+godCanvasEl.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = godCanvasEl.getBoundingClientRect();
+  godZoomBy(e.deltaY < 0 ? 1.2 : 1 / 1.2, e.clientX - rect.left, e.clientY - rect.top);
+}, { passive: false });
+// 拖曳平移（滑鼠 / 觸控單指）與雙指縮放（pinch）
+let godDrag = null; // { mode:'pan'|'pinch', ids:[], pts:{pointerId:{x,y}}, dist0, lastX, lastY }
+godCanvasEl.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (!godDrag) {
+    godDrag = { mode: 'pan', ids: [e.pointerId], pts: {}, dist0: 0, lastX: e.clientX, lastY: e.clientY };
+    godDrag.pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+    try { godCanvasEl.setPointerCapture(e.pointerId); } catch (err) {}
+  } else if (godDrag.ids.length === 1 && godDrag.ids[0] !== e.pointerId) {
+    // 第二指落下 → 進入 pinch
+    godDrag.mode = 'pinch';
+    godDrag.ids.push(e.pointerId);
+    godDrag.pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+    const p1 = godDrag.pts[godDrag.ids[0]], p2 = godDrag.pts[godDrag.ids[1]];
+    godDrag.dist0 = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 40;
+    try { godCanvasEl.setPointerCapture(e.pointerId); } catch (err) {}
+  }
+});
+godCanvasEl.addEventListener('pointermove', (e) => {
+  if (!godDrag || !godDrag.pts[e.pointerId]) return;
+  godDrag.pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+  if (godDrag.mode === 'pinch' && godDrag.ids.length === 2) {
+    const p1 = godDrag.pts[godDrag.ids[0]], p2 = godDrag.pts[godDrag.ids[1]];
+    const d = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 40;
+    if (godDrag.dist0 > 0) godZoomBy(d / godDrag.dist0);
+    godDrag.dist0 = d;
+  } else if (godDrag.mode === 'pan') {
+    godViewPanX += e.clientX - godDrag.lastX;
+    godViewPanY += e.clientY - godDrag.lastY;
+    godDrag.lastX = e.clientX;
+    godDrag.lastY = e.clientY;
+    renderGodView();
+  }
+});
+function endGodDrag(e) {
+  if (!godDrag || !godDrag.ids.includes(e.pointerId)) return;
+  godDrag.ids = godDrag.ids.filter(id => id !== e.pointerId);
+  delete godDrag.pts[e.pointerId];
+  if (godDrag.ids.length === 0) godDrag = null;
+  else if (godDrag.ids.length === 1) {
+    // 回到單指：以剩餘指頭為基準繼續拖曳
+    godDrag.mode = 'pan';
+    const rest = godDrag.pts[godDrag.ids[0]];
+    godDrag.lastX = rest.x;
+    godDrag.lastY = rest.y;
+    godDrag.dist0 = 0;
+  }
+}
+godCanvasEl.addEventListener('pointerup', endGodDrag);
+godCanvasEl.addEventListener('pointercancel', endGodDrag);
 
 // --- 紋理生成 ---
 const TEX_SIZE = 64;
@@ -3435,18 +3562,15 @@ for (let i = 0; i < 80; i++) {
 
 // --- 主渲染 ---
 // --- 上帝視角：2D 俯視全圖（牆/門/尖刺/寶石/鑰匙/傳送點/終點/敵人/玩家/自動路徑） ---
-function renderGodView() {
-  if (!gameStarted || gameWon || playerDead) { if (godView) toggleGodView(); return; }
-  const cv = document.getElementById('god-canvas');
-  if (!cv) return;
-  const g = cv.getContext('2d');
+// --- 上帝視角：平面全圖模式（zoom=1） ---
+function renderGodFlat(g, CW, CH) {
   const maxPx = 820;
   const cell = Math.max(2, Math.floor(Math.min(maxPx / MAP_W, maxPx / MAP_H)));
   const Wpx = MAP_W * cell, Hpx = MAP_H * cell;
+  const cv = document.getElementById('god-canvas');
   if (cv.width !== Wpx || cv.height !== Hpx) { cv.width = Wpx; cv.height = Hpx; }
   g.fillStyle = '#0a0e18';
   g.fillRect(0, 0, Wpx, Hpx);
-  // 地圖格子
   for (let y = 0; y < MAP_H; y++) {
     for (let x = 0; x < MAP_W; x++) {
       const v = MAP[y][x];
@@ -3530,18 +3654,33 @@ function renderGodView() {
     g.arc(e.x * cell, e.y * cell, Math.max(2, cell * 0.34), 0, Math.PI * 2);
     g.fill();
   }
-  // 玩家（三角 + 朝向）
+  // 玩家（小人俯視：身體 + 頭 + 朝向）
   const px = player.x * cell, py = player.y * cell;
   const pr = Math.max(3, cell * 0.42);
+  // 影子
+  g.fillStyle = 'rgba(0,0,0,0.5)';
+  g.beginPath();
+  g.ellipse(px, py + pr * 0.35, pr * 1.1, pr * 0.5, 0, 0, Math.PI * 2);
+  g.fill();
+  // 身體（圓）
+  g.fillStyle = '#ffffff';
+  g.beginPath();
+  g.arc(px, py, pr, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = '#9ad';
+  g.lineWidth = Math.max(1, cell * 0.08);
+  g.beginPath();
+  g.arc(px, py, pr, 0, Math.PI * 2);
+  g.stroke();
+  // 朝向箭頭
+  g.fillStyle = '#2a5';
   g.save();
   g.translate(px, py);
   g.rotate(player.dir);
-  g.fillStyle = '#ffffff';
   g.beginPath();
-  g.moveTo(pr * 1.15, 0);
-  g.lineTo(-pr * 0.75, pr * 0.65);
-  g.lineTo(-pr * 0.35, 0);
-  g.lineTo(-pr * 0.75, -pr * 0.65);
+  g.moveTo(pr * 1.35, 0);
+  g.lineTo(-pr * 0.45, pr * 0.5);
+  g.lineTo(-pr * 0.45, -pr * 0.5);
   g.closePath();
   g.fill();
   g.restore();
@@ -3549,6 +3688,225 @@ function renderGodView() {
   g.strokeStyle = '#333';
   g.lineWidth = 1;
   g.strokeRect(0, 0, Wpx, Hpx);
+}
+
+// --- 上帝視角：等距 3D 立體模式（zoom>1，牆有高度、玩家為 3D 小人） ---
+function renderGod3D(g, CW, CH) {
+  const minDim = Math.min(MAP_W, MAP_H);
+  const R = Math.max(2, Math.round((minDim / 2) / godViewZoom)); // 可見半徑（格）
+  const S = CH / (2 * R + 4);                                     // 每格邊長（畫素）
+  const isoW = S * 0.866;
+  const ox = CW / 2 + godViewPanX;
+  const oy = CH / 2 + godViewPanY;
+  const wallH = Math.min(2.2, godViewZoom * 0.4);                 // 牆高倍率（隨縮放增加）
+  const px = player.x, py = player.y;
+  const cx = Math.floor(px), cy = Math.floor(py);
+  function proj(wx, wy, h) {
+    return { x: ox + (wx - wy) * isoW, y: oy + (wx + wy) * S * 0.5 - h };
+  }
+  function poly(pts, fill, stroke) {
+    g.fillStyle = fill;
+    g.beginPath();
+    g.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+    g.closePath();
+    g.fill();
+    if (stroke) { g.strokeStyle = stroke; g.lineWidth = 1; g.stroke(); }
+  }
+  g.fillStyle = '#0a0e18';
+  g.fillRect(0, 0, CW, CH);
+  // 收集可見格子並由遠到近排序（x+y 遞增 = 先畫遠處）
+  const cells = [];
+  for (let dy = -R; dy <= R; dy++) {
+    for (let dx = -R; dx <= R; dx++) {
+      const x = cx + dx, y = cy + dy;
+      if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) continue;
+      cells.push([x, y]);
+    }
+  }
+  cells.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
+  // 地面
+  const groundCol = '#151b2b';
+  for (const [x, y] of cells) {
+    const p0 = proj(x, y, 0), p1 = proj(x + 1, y, 0), p2 = proj(x + 1, y + 1, 0), p3 = proj(x, y + 1, 0);
+    poly([p0, p1, p2, p3], groundCol);
+  }
+  // 終點發光地面
+  for (const [x, y] of cells) {
+    if (x === Math.floor(END.x) && y === Math.floor(END.y)) {
+      const p0 = proj(x, y, 0), p1 = proj(x + 1, y, 0), p2 = proj(x + 1, y + 1, 0), p3 = proj(x, y + 1, 0);
+      poly([p0, p1, p2, p3], '#1f5c2f');
+    }
+  }
+  // 格子牆體（含門/欄杆/尖刺）
+  const wallCol = '#6a7390';
+  const wallSide1 = '#4c536b';  // 右下側（暗）
+  const wallSide2 = '#3a4055';  // 左下側（更暗）
+  for (const [x, y] of cells) {
+    const v = MAP[y][x];
+    let col = null, h = 0;
+    if (v === 1 || v === 2 || v === 3) { col = wallCol; h = S * wallH; }
+    else if (v === TILE_DOOR) { col = '#c08a3e'; h = S * wallH * 0.55; }
+    else if (v === TILE_BARS) { col = '#7b8498'; h = S * wallH * 0.5; }
+    if (col) {
+      const p0 = proj(x, y, 0), p1 = proj(x + 1, y, 0), p2 = proj(x + 1, y + 1, 0), p3 = proj(x, y + 1, 0);
+      const t0 = proj(x, y, h), t1 = proj(x + 1, y, h), t2 = proj(x + 1, y + 1, h), t3 = proj(x, y + 1, h);
+      // 右下側面
+      poly([p1, t1, t2, p2], wallSide1);
+      // 左下側面
+      poly([p2, t2, t3, p3], wallSide2);
+      // 頂面
+      poly([t0, t1, t2, t3], col);
+    } else if (v === TILE_SPIKE) {
+      const c = proj(x + 0.5, y + 0.5, 0);
+      poly([
+        proj(x + 0.5, y, 0), proj(x + 1, y + 0.5, 0), proj(x + 0.5, y + 1, 0), proj(x, y + 0.5, 0)
+      ], '#8e2f2f');
+      const tip = proj(x + 0.5, y + 0.5, S * 0.5);
+      g.fillStyle = '#d44';
+      g.beginPath();
+      g.moveTo(proj(x + 0.5, y + 0.1, 0).x, proj(x + 0.5, y + 0.1, 0).y);
+      g.lineTo(tip.x, tip.y);
+      g.lineTo(proj(x + 0.9, y + 0.5, 0).x, proj(x + 0.9, y + 0.5, 0).y);
+      g.lineTo(proj(x + 0.5, y + 0.9, 0).x, proj(x + 0.5, y + 0.9, 0).y);
+      g.lineTo(proj(x + 0.1, y + 0.5, 0).x, proj(x + 0.1, y + 0.5, 0).y);
+      g.closePath();
+      g.fill();
+    }
+  }
+  // 自動遊玩路徑（地面線）
+  if (autoPlay && autoPath && autoPath.length > 1) {
+    g.strokeStyle = 'rgba(170,68,255,0.85)';
+    g.lineWidth = Math.max(1.5, S * 0.12);
+    g.lineJoin = 'round';
+    g.beginPath();
+    const sp0 = proj(px, py, 0.01);
+    g.moveTo(sp0.x, sp0.y);
+    for (let i = Math.max(1, autoPathIndex); i < autoPath.length; i++) {
+      const pp = proj(autoPath[i].x + 0.5, autoPath[i].y + 0.5, 0.01);
+      g.lineTo(pp.x, pp.y);
+    }
+    g.stroke();
+  }
+  // 傳送點（地面紫圈 + 標籤）
+  for (const tp of teleporters) {
+    for (const [ax, ay, tag] of [[tp.ax, tp.ay, 'A'], [tp.bx, tp.by, 'B']]) {
+      const c = proj(ax + 0.5, ay + 0.5, 0);
+      g.strokeStyle = '#a86cff';
+      g.lineWidth = Math.max(1.5, S * 0.14);
+      g.beginPath();
+      g.ellipse(c.x, c.y, S * 0.42, S * 0.24, -0.2, 0, Math.PI * 2);
+      g.stroke();
+      if (S >= 9) {
+        g.fillStyle = '#c9a7ff';
+        g.font = Math.max(8, Math.floor(S * 0.55)) + 'px sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(tag, c.x, c.y - S * 0.2);
+      }
+    }
+  }
+  // 寶石（浮空菱形）
+  for (const gem of gems) {
+    if (gem.collected) continue;
+    const c = proj(gem.x, gem.y, S * 0.42);
+    g.fillStyle = '#ffd54a';
+    g.beginPath();
+    g.moveTo(c.x, c.y - S * 0.3);
+    g.lineTo(c.x + S * 0.26, c.y);
+    g.lineTo(c.x, c.y + S * 0.3);
+    g.lineTo(c.x - S * 0.26, c.y);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#aa8c22';
+    g.lineWidth = 1;
+    g.stroke();
+  }
+  // 鑰匙（浮空圓）
+  for (const k of keyItems) {
+    if (k.collected) continue;
+    const c = proj(k.x, k.y, S * 0.35);
+    g.fillStyle = '#6ac8ff';
+    g.beginPath();
+    g.arc(c.x, c.y, Math.max(2, S * 0.22), 0, Math.PI * 2);
+    g.fill();
+  }
+  // 敵人（3D 小圓柱）
+  const eColor = { chaser: '#ff4d4d', patrol: '#c9d23a', shooter: '#a24dff', tank: '#9aa0ad', swarm: '#ff9a3c', boss: '#ff2b2b', splitter: '#ff7ad9' };
+  for (const e of enemies) {
+    if (e.state === 'dead') continue;
+    const col = eColor[e.type] || '#f66';
+    const er = S * 0.26;
+    const eh = S * (e.type === 'boss' ? 1.1 : e.type === 'tank' ? 0.9 : 0.65);
+    const b = proj(e.x, e.y, 0);
+    const t = proj(e.x, e.y, eh);
+    // 影子
+    g.fillStyle = 'rgba(0,0,0,0.45)';
+    g.beginPath();
+    g.ellipse(b.x, b.y, er, er * 0.5, 0, 0, Math.PI * 2);
+    g.fill();
+    // 身體
+    g.fillStyle = col;
+    g.fillRect(b.x - er, t.y, er * 2, eh);
+    g.beginPath();
+    g.arc(t.x, t.y, er, 0, Math.PI * 2);
+    g.fill();
+  }
+  // 玩家（3D 小人：身體 + 頭 + 朝向）
+  const pr = S * 0.3;
+  const ph = S * 1.0;
+  const b = proj(px, py, 0);
+  const t = proj(px, py, ph);
+  // 影子
+  g.fillStyle = 'rgba(0,0,0,0.5)';
+  g.beginPath();
+  g.ellipse(b.x, b.y, pr * 1.15, pr * 0.55, 0, 0, Math.PI * 2);
+  g.fill();
+  // 身體（矩形側面 + 圓柱頂）
+  g.fillStyle = '#4a9eff';
+  g.fillRect(b.x - pr * 0.85, t.y, pr * 1.7, ph);
+  g.fillStyle = '#7fc0ff';
+  g.beginPath();
+  g.arc(t.x, t.y, pr * 0.85, 0, Math.PI * 2);
+  g.fill();
+  // 頭
+  const hc = proj(px, py, ph + pr * 0.95);
+  g.fillStyle = '#ffd9b3';
+  g.beginPath();
+  g.arc(hc.x, hc.y, pr * 0.7, 0, Math.PI * 2);
+  g.fill();
+  // 眼睛（朝向）
+  const eye = proj(px + Math.cos(player.dir) * 0.28, py + Math.sin(player.dir) * 0.28, ph + pr * 0.95);
+  g.fillStyle = '#1a2430';
+  g.beginPath();
+  g.arc(eye.x, eye.y, pr * 0.22, 0, Math.PI * 2);
+  g.fill();
+  // 朝向箭頭（地面）
+  g.fillStyle = '#2a5';
+  g.save();
+  g.translate(b.x, b.y);
+  g.rotate(player.dir - 0.2);
+  g.beginPath();
+  g.moveTo(pr * 1.5, 0);
+  g.lineTo(-pr * 0.4, pr * 0.55);
+  g.lineTo(-pr * 0.4, -pr * 0.55);
+  g.closePath();
+  g.fill();
+  g.restore();
+}
+
+// --- 上帝視角入口 ---
+function renderGodView() {
+  if (!gameStarted || gameWon || playerDead) { if (godView) toggleGodView(); return; }
+  const cv = document.getElementById('god-canvas');
+  if (!cv) return;
+  const g = cv.getContext('2d');
+  const CW = Math.min(920, Math.max(480, window.innerWidth - 40));
+  const CH = Math.min(840, Math.max(360, window.innerHeight - 170));
+  if (godViewZoom <= 1.02) {
+    renderGodFlat(g, CW, CH);
+  } else {
+    renderGod3D(g, CW, CH);
+  }
 }
 
 function toggleGodView() {
