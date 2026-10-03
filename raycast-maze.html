@@ -824,10 +824,11 @@
     flex-direction: column;
   }
   #god-canvas {
-    max-width: 96vw;
-    max-height: 90vh;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
     image-rendering: pixelated;
-    border: 1px solid #333;
+    border: none;
     background: #0a0e18;
     touch-action: none;
     cursor: grab;
@@ -840,6 +841,7 @@
     letter-spacing: 1px;
     cursor: pointer;
     user-select: none;
+    pointer-events: auto;
   }
   .god-tip:hover { color: #cde; }
   .god-controls {
@@ -2439,12 +2441,13 @@
   <div id="god-view" style="display:none;">
     <canvas id="god-canvas"></canvas>
     <div class="god-controls">
+      <button class="god-btn" id="god-exit" type="button">← 返回</button>
       <button class="god-btn" id="god-zoom-out" type="button">−</button>
       <span id="god-zoom-label">100%</span>
       <button class="god-btn" id="god-zoom-in" type="button">+</button>
       <button class="god-btn" id="god-reset" type="button">重置</button>
     </div>
-    <div class="god-tip">上帝視角 — 滾輪／雙指縮放・拖曳移動・按 G 或點此關閉</div>
+    <div class="god-tip">上帝視角 — 左右拖曳轉動視角・滾輪／雙指縮放・WASD 仍可操控角色・按 G、Esc 或點返回退出</div>
   </div>
 
   <!-- 地圖編輯器 -->
@@ -3065,9 +3068,11 @@ let lastMoveSpeedMag = 0;  // 上幀移動強度
 
 // --- 上帝視角（2D 俯視全圖 / 可縮放 3D 立體） ---
 let godView = false;
-let godViewZoom = 1;        // 1 = 全圖平面；>1 = 等距 3D 立體（放大）
-let godViewPanX = 0;        // 拖曳平移（畫素）
+let godViewZoom = 1;        // 縮放倍率（1 = 全圖，越大越近）
+let godViewPanX = 0;        // 平移偏移（畫素，縮放錨點用）
 let godViewPanY = 0;
+let godViewRotY = 0;        // 視角水平旋轉（左右拖曳）
+let godViewRotX = 0;        // 視角俯仰（上下拖曳，夾住範圍）
 
 // --- 螢幕震動 ---
 let shakeTime = 0;        // 剩餘震動時間（秒）
@@ -3329,16 +3334,19 @@ document.getElementById('god-reset').addEventListener('click', () => {
   godViewZoom = 1;
   godViewPanX = 0;
   godViewPanY = 0;
+  godViewRotY = 0;
+  godViewRotX = 0;
   updateGodZoomUI();
   renderGodView();
 });
+document.getElementById('god-exit').addEventListener('click', () => { if (godView) toggleGodView(); });
 // 滾輪縮放
 godCanvasEl.addEventListener('wheel', (e) => {
   e.preventDefault();
   const rect = godCanvasEl.getBoundingClientRect();
   godZoomBy(e.deltaY < 0 ? 1.2 : 1 / 1.2, e.clientX - rect.left, e.clientY - rect.top);
 }, { passive: false });
-// 拖曳平移（滑鼠 / 觸控單指）與雙指縮放（pinch）
+// 拖曳轉動視角（滑鼠 / 觸控單指：左右水平旋轉、上下俯仰）與雙指縮放（pinch）
 let godDrag = null; // { mode:'pan'|'pinch', ids:[], pts:{pointerId:{x,y}}, dist0, lastX, lastY }
 godCanvasEl.addEventListener('pointerdown', (e) => {
   e.preventDefault();
@@ -3365,8 +3373,9 @@ godCanvasEl.addEventListener('pointermove', (e) => {
     if (godDrag.dist0 > 0) godZoomBy(d / godDrag.dist0);
     godDrag.dist0 = d;
   } else if (godDrag.mode === 'pan') {
-    godViewPanX += e.clientX - godDrag.lastX;
-    godViewPanY += e.clientY - godDrag.lastY;
+    // 左右拖曳轉動視角（水平旋轉），上下拖曳俯仰（夾住範圍）
+    godViewRotY += (e.clientX - godDrag.lastX) * 0.012;
+    godViewRotX = Math.min(0.7, Math.max(-0.7, godViewRotX + (e.clientY - godDrag.lastY) * 0.008));
     godDrag.lastX = e.clientX;
     godDrag.lastY = e.clientY;
     renderGodView();
@@ -3797,7 +3806,7 @@ function renderGodFlat(g, CW, CH) {
   g.strokeRect(0, 0, Wpx, Hpx);
 }
 
-// --- 上帝視角：等距 3D 立體模式（zoom>1，牆有高度、玩家為 3D 小人） ---
+// --- 上帝視角：等距 3D 立體模式（牆有高度、玩家為 3D 小人，左右拖曳轉動視角） ---
 function renderGod3D(g, CW, CH) {
   const minDim = Math.min(MAP_W, MAP_H);
   const R = Math.max(2, Math.round((minDim / 2) / godViewZoom)); // 可見半徑（格）
@@ -3808,8 +3817,15 @@ function renderGod3D(g, CW, CH) {
   const wallH = Math.min(2.2, godViewZoom * 0.4);                 // 牆高倍率（隨縮放增加）
   const px = player.x, py = player.y;
   const cx = Math.floor(px), cy = Math.floor(py);
+  const cosY = Math.cos(godViewRotY), sinY = Math.sin(godViewRotY);
+  // 世界座標繞玩家旋轉後再等距投影；俯仰（godViewRotX）對螢幕 y 施加傾斜
   function proj(wx, wy, h) {
-    return { x: ox + (wx - wy) * isoW, y: oy + (wx + wy) * S * 0.5 - h };
+    const dx = wx - px, dy = wy - py;
+    const rx = dx * cosY - dy * sinY;
+    const ry = dx * sinY + dy * cosY;
+    const baseX = ox + (rx - ry) * isoW;
+    const baseY = oy + (rx + ry) * S * 0.5 - h;
+    return { x: baseX, y: baseY + godViewRotX * (rx + ry) * S * 0.35 };
   }
   function poly(pts, fill, stroke) {
     g.fillStyle = fill;
@@ -3831,7 +3847,11 @@ function renderGod3D(g, CW, CH) {
       cells.push([x, y]);
     }
   }
-  cells.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
+  cells.sort((a, b) => {
+    // 依旋轉後的投影深度由遠到近排序（遠 = rx+ry 大）
+    const key = (x, y) => (x - px) * (cosY + sinY) + (y - py) * (cosY - sinY);
+    return key(b[0], b[1]) - key(a[0], a[1]);
+  });
   // 地面
   const groundCol = '#151b2b';
   for (const [x, y] of cells) {
@@ -3981,8 +4001,8 @@ function renderGod3D(g, CW, CH) {
   g.beginPath();
   g.arc(hc.x, hc.y, pr * 0.7, 0, Math.PI * 2);
   g.fill();
-  // 眼睛（朝向）
-  const eye = proj(px + Math.cos(player.dir) * 0.28, py + Math.sin(player.dir) * 0.28, ph + pr * 0.95);
+  // 眼睛（朝向，扣除視角旋轉使眼睛始終指向玩家實際朝向）
+  const eye = proj(px + Math.cos(player.dir - godViewRotY) * 0.28, py + Math.sin(player.dir - godViewRotY) * 0.28, ph + pr * 0.95);
   g.fillStyle = '#1a2430';
   g.beginPath();
   g.arc(eye.x, eye.y, pr * 0.22, 0, Math.PI * 2);
@@ -4007,13 +4027,10 @@ function renderGodView() {
   const cv = document.getElementById('god-canvas');
   if (!cv) return;
   const g = cv.getContext('2d');
-  const CW = Math.min(920, Math.max(480, window.innerWidth - 40));
-  const CH = Math.min(840, Math.max(360, window.innerHeight - 170));
-  if (godViewZoom <= 1.02) {
-    renderGodFlat(g, CW, CH);
-  } else {
-    renderGod3D(g, CW, CH);
-  }
+  // 全屏渲染
+  const CW = cv.width = window.innerWidth;
+  const CH = cv.height = window.innerHeight;
+  renderGod3D(g, CW, CH);
 }
 
 function toggleGodView() {
