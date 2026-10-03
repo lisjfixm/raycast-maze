@@ -1102,6 +1102,20 @@
     border-color: #4af;
     color: #4af;
   }
+  /* v2.5：筆刷大小滑桿 */
+  .brush-slider-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #bbb;
+    font-size: 12px;
+    margin-left: 4px;
+  }
+  .brush-slider-label input[type="range"] {
+    width: 80px;
+    accent-color: #4af;
+    cursor: pointer;
+  }
   .editor-actions .icon-btn.disabled {
     opacity: 0.35;
     cursor: not-allowed;
@@ -1958,6 +1972,25 @@
     cursor: pointer; letter-spacing: 3px;
   }
 
+  /* ===== v2.4：分步任務引導教學橫幅（不阻擋遊戲操作） ===== */
+  #step-tutorial {
+    position: fixed; bottom: 16%; left: 50%; transform: translateX(-50%);
+    display: none; align-items: center; gap: 12px;
+    background: rgba(8,16,36,0.88); border: 1px solid #4af;
+    border-radius: 10px; padding: 10px 16px;
+    color: #cdf; font-size: 13px; z-index: 280;
+    pointer-events: none; max-width: 92vw; text-align: center;
+    box-shadow: 0 0 24px rgba(68,170,255,0.25);
+  }
+  #step-tutorial.show { display: flex; animation: fade-in .25s ease-out both; }
+  #step-tutorial button {
+    pointer-events: auto; background: #1a3a6a; color: #fff;
+    border: 1px solid #6af; border-radius: 6px;
+    padding: 4px 12px; cursor: pointer; font-size: 12px; font-family: inherit;
+    flex-shrink: 0;
+  }
+  #step-tutorial button:hover { background: #2a4a8a; }
+
   /* ===== 生成 / 規劃進度提示 ===== */
   #loading-overlay {
     position: absolute; inset: 0; z-index: 250;
@@ -2245,6 +2278,21 @@
       <button class="size-btn" data-size="colossal">浩瀚</button>
       <button class="size-btn" data-size="limitless">無邊</button>
     </div>
+    <!-- v2.4：進階生成選項（環路率 / 走廊密度 / 鏡射對稱） -->
+    <div class="size-label">進階生成</div>
+    <div class="size-row" id="maze-loop-row">
+      <button class="size-btn" data-loop="0">無環路</button>
+      <button class="size-btn" data-loop="0.03">普通環路</button>
+      <button class="size-btn" data-loop="0.08">多環路</button>
+    </div>
+    <div class="size-row" id="maze-branch-row">
+      <button class="size-btn" data-branch="corridor">單通道</button>
+      <button class="size-btn" data-branch="branch">多分支</button>
+    </div>
+    <div class="size-row" id="maze-sym-row">
+      <button class="size-btn" data-sym="off">不對稱</button>
+      <button class="size-btn" data-sym="on">鏡射對稱</button>
+    </div>
     <div class="size-label">怪物模式</div>
     <div class="size-row" id="monster-row">
       <button class="size-btn active" data-monster="on">有怪</button>
@@ -2270,6 +2318,7 @@
       <button class="weather-btn" data-weather="storm">暴風雨</button>
       <button class="weather-btn" data-weather="snow">雪</button>
       <button class="weather-btn" data-weather="sand">沙塵</button>
+      <button class="weather-btn" data-weather="aurora">極光</button>
     </div>
     <div class="controls" id="start-controls">
       載入中...
@@ -2278,7 +2327,7 @@
     <button id="editor-btn" style="margin-top:14px;background:linear-gradient(135deg,#666,#444);box-shadow:0 0 15px rgba(100,100,100,0.3);">自訂地圖</button>
     <button id="autoplay-btn" style="margin-top:10px;background:linear-gradient(135deg,#a4f,#82c);box-shadow:0 0 15px rgba(170,68,255,0.3);">AI 自動遊玩</button>
     <button id="ach-btn" style="margin-top:10px;background:linear-gradient(135deg,#c93,#960);box-shadow:0 0 15px rgba(255,200,60,0.3);">成就與統計</button>
-    <div id="start-info">版本 v2.3　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
+    <div id="start-info">版本 v2.5　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
   </div>
 
   <!-- 勝利畫面 -->
@@ -2349,6 +2398,22 @@
           <option value="off">關閉</option>
         </select>
       </div>
+      <!-- v2.4：音效分軌三條音量滑桿 -->
+      <div class="setting-row">
+        <label>音樂音量</label>
+        <input type="range" id="set-musicvol" min="0" max="1" step="0.05" value="1.0">
+        <span class="setting-value" id="set-musicvol-val">100%</span>
+      </div>
+      <div class="setting-row">
+        <label>音效音量</label>
+        <input type="range" id="set-sfxvol" min="0" max="1" step="0.05" value="1.0">
+        <span class="setting-value" id="set-sfxvol-val">100%</span>
+      </div>
+      <div class="setting-row">
+        <label>環境音量</label>
+        <input type="range" id="set-envvol" min="0" max="1" step="0.05" value="1.0">
+        <span class="setting-value" id="set-envvol-val">100%</span>
+      </div>
       <div class="setting-row">
         <label>字體大小</label>
         <select id="set-fontsize">
@@ -2359,9 +2424,12 @@
       </div>
       <div class="setting-row">
         <label>色盲模式</label>
+        <!-- v2.4：擴充為四選一 off / protan 紅弱 / deutan 綠弱 / tritan 藍弱 -->
         <select id="set-colorblind">
           <option value="off">關閉</option>
-          <option value="on">開啟</option>
+          <option value="protan">紅色弱視</option>
+          <option value="deutan">綠色弱視</option>
+          <option value="tritan">藍色弱視</option>
         </select>
       </div>
       <div class="setting-row">
@@ -2403,6 +2471,13 @@
       <div class="setting-row">
         <label>日夜循環</label>
         <select id="set-daynight">
+          <option value="on">開啟</option>
+          <option value="off">關閉</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label>血月事件</label>
+        <select id="set-bloodmoon">
           <option value="on">開啟</option>
           <option value="off">關閉</option>
         </select>
@@ -2466,6 +2541,8 @@
         <button class="tool-btn" data-tool="spike" title="放置尖刺陷阱">尖刺</button>
         <button class="tool-btn" data-tool="door" title="放置鎖門">鎖門</button>
         <button class="tool-btn" data-tool="bars" title="放置欄杆（障礙物）">欄杆</button>
+        <button class="tool-btn" data-tool="ice" title="放置冰面（滑行地板）">冰面</button>
+        <button class="tool-btn" data-tool="crumble" title="放置崩落地板（踏上後碎裂）">崩落</button>
         <button class="tool-btn" data-tool="fill" title="填充（油漆桶）">填充</button>
         <button class="tool-btn" data-tool="select" title="選擇區域">選擇</button>
         <button class="tool-btn" data-tool="rect" title="拖曳畫矩形（牆/依筆刷值）">矩形</button>
@@ -2483,6 +2560,11 @@
           <button class="brush-btn active" data-brush="1">1x1</button>
           <button class="brush-btn" data-brush="2">2x2</button>
           <button class="brush-btn" data-brush="3">3x3</button>
+          <button class="brush-btn" data-brush="4">4x4</button>
+          <button class="brush-btn" data-brush="5">5x5</button>
+          <label class="brush-slider-label" title="筆刷大小滑桿（1-5）">大小
+            <input type="range" id="brush-size-slider" min="1" max="5" step="1" value="1">
+          </label>
         </div>
         <div class="brush-group" title="筆刷形狀">
           <button class="brush-shape-btn active" data-shape="square" title="方形筆刷">方</button>
@@ -2572,6 +2654,12 @@
     </div>
   </div>
 
+  <!-- v2.4：分步任務引導教學橫幅（不阻擋遊戲操作，僅底部提示） -->
+  <div id="step-tutorial">
+    <span id="step-tut-text"></span>
+    <button id="step-tut-skip">略過</button>
+  </div>
+
   <!-- 載入 / 生成進度提示 -->
   <div id="loading-overlay">
     <div class="loading-spinner"></div>
@@ -2592,6 +2680,9 @@ const fpsEl = document.getElementById('fps');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
 const startControls = document.getElementById('start-controls');
+// v2.4：每幀都會存取的 DOM 參照提早快取（避免每幀 getElementById）
+const dmgVigEl = document.getElementById('damage-vignette');
+const attackSwingEl = document.getElementById('attack-swing');
 
 // --- 偵測移動端 ---
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -2620,7 +2711,7 @@ const settings = {
   enemyDensity: 'normal',  // none / few / normal / many
   monsterMode: 'on',       // on / none：有怪模式 / 無怪模式
   bossMode: 'off',         // on / off：是否出現 Boss（僅有怪模式生效）
-  weather: 'clear',         // clear / rain / fog / storm
+  weather: 'clear',         // clear / rain / fog / storm / snow / sand / aurora（v2.5 補上極光）
   fontSize: 'medium',       // small / medium / large
   colorblind: false,
   reduceMotion: false,
@@ -2634,6 +2725,14 @@ const settings = {
   particleDensity: 'high',   // 粒子密度 low/medium/high
   toastDuration: 1500,       // Toast 提示顯示時長（ms）
   screenEffects: true,       // 螢幕特效（傷害暗角 / 鏡頭震動）開關
+  // v2.4 新增
+  musicVol: 1.0,             // 音樂分軌音量 0~1
+  sfxVol: 1.0,               // 音效分軌音量 0~1
+  envVol: 1.0,               // 環境音（雨聲等）分軌音量 0~1
+  mazeLoopRate: 0.03,       // 迷宮環路率 0 / 0.03 / 0.08
+  mazeBranching: 'corridor', // 迷宮走廊密度 'corridor' 單通道 / 'branch' 多分支
+  mazeSymmetry: false,       // 迷宮是否鏡射對稱
+  bloodMoon: true,           // v2.5：血月隨機事件開關（預設開）
 };
 function loadSettings() {
   try {
@@ -2641,11 +2740,90 @@ function loadSettings() {
     if (raw) Object.assign(settings, JSON.parse(raw));
   } catch (e) {}
   if (!settings.particleDensity) settings.particleDensity = 'high';
+  // v2.4 向後相容：舊存檔 colorblind 為布林 true/false → 映射為新模式
+  if (typeof settings.colorblind === 'boolean') {
+    settings.colorblind = settings.colorblind ? 'protan' : 'off';
+  }
+  if (!settings.colorblind) settings.colorblind = 'off';
+  // v2.4 新欄位預設值（確保舊存檔缺欄位時有合理預設）
+  if (typeof settings.musicVol !== 'number') settings.musicVol = 1.0;
+  if (typeof settings.sfxVol !== 'number') settings.sfxVol = 1.0;
+  if (typeof settings.envVol !== 'number') settings.envVol = 1.0;
+  if (settings.mazeLoopRate !== 0.0 && settings.mazeLoopRate !== 0.03 && settings.mazeLoopRate !== 0.08) {
+    settings.mazeLoopRate = 0.03;
+  }
+  if (settings.mazeBranching !== 'corridor' && settings.mazeBranching !== 'branch') {
+    settings.mazeBranching = 'corridor';
+  }
+  if (typeof settings.mazeSymmetry !== 'boolean') settings.mazeSymmetry = false;
+  // v2.5 新欄位預設值（確保舊存檔缺欄位時有合理預設）
+  if (typeof settings.bloodMoon !== 'boolean') settings.bloodMoon = true;
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
 }
 loadSettings();
+
+// v2.4：色盲模式調色盤（off / protan 紅弱 / deutan 綠弱 / tritan 藍弱）
+// 回傳 [r,g,b]；敵我色盤分別映射，確保紅綠/藍色弱者仍能區分敵人類型與寶石
+function getEnemyRGB(type) {
+  const mode = settings.colorblind || 'off';
+  // 預設（off）色盤
+  let pal = {
+    chaser:   [255, 60, 60],
+    patrol:   [180, 255, 80],
+    shooter:  [180, 80, 255],
+    tank:     [90, 90, 100],
+    swarm:    [255, 150, 40],
+    splitter: [80, 230, 110],
+    sentinel: [255, 220, 90],
+    healer:   [90, 255, 190],
+  };
+  if (mode === 'protan') {
+    // 紅色弱視：紅色難辨 → chaser 改紫、patrol 改金黃、shooter 改粉紅
+    pal = {
+      chaser:   [200, 80, 255],
+      patrol:   [255, 200, 60],
+      shooter:  [255, 90, 140],
+      tank:     [90, 90, 100],
+      swarm:    [255, 150, 40],
+      splitter: [120, 220, 120],
+      sentinel: [255, 220, 90],
+      healer:   [90, 255, 190],
+    };
+  } else if (mode === 'deutan') {
+    // 綠色弱視：綠色難辨 → patrol 改黃、shooter 改藍、chaser 改紅粉
+    pal = {
+      chaser:   [255, 60, 120],
+      patrol:   [255, 210, 60],
+      shooter:  [90, 110, 255],
+      tank:     [90, 90, 100],
+      swarm:    [255, 150, 40],
+      splitter: [140, 220, 140],
+      sentinel: [255, 220, 90],
+      healer:   [90, 255, 220],
+    };
+  } else if (mode === 'tritan') {
+    // 藍色弱視：藍色難辨 → shooter 改橘、patrol 改青綠
+    pal = {
+      chaser:   [255, 70, 70],
+      patrol:   [90, 210, 130],
+      shooter:  [255, 180, 60],
+      tank:     [90, 90, 100],
+      swarm:    [255, 150, 40],
+      splitter: [80, 230, 110],
+      sentinel: [255, 230, 120],
+      healer:   [120, 255, 160],
+    };
+  }
+  return pal[type] || pal.patrol;
+}
+// v2.4：寶石顏色（色盲模式統一用高飽和黃色，與青藍原樣區分）
+function getGemRGB() {
+  const mode = settings.colorblind || 'off';
+  if (mode === 'off') return [100, 255, 255];
+  return [255, 220, 50];
+}
 
 // --- 粒子密度上限（須早於 applySettings 首次呼叫，故在此宣告） ---
 let particleLimit = 200;
@@ -2715,24 +2893,25 @@ function updateMinimapVisibility() {
 }
 
 // 套用難度到遊戲狀態
-function applyDifficulty() {
+// v2.4：resetMinimap=false 時只調整 fog/torch，不覆蓋玩家按 M 手動切換的小地圖狀態
+function applyDifficulty(resetMinimap = true) {
   const d = settings.difficulty;
   if (d === 'easy') {
     torchIntensity = 0.8;
     CONFIG.fogDistance = 12;
-    showMinimap = true;
+    if (resetMinimap) showMinimap = true;
   } else if (d === 'hard') {
     torchIntensity = 0.4;
     CONFIG.fogDistance = 8;
-    showMinimap = true;
+    if (resetMinimap) showMinimap = true;
   } else if (d === 'nightmare') {
     torchIntensity = 0.3;
     CONFIG.fogDistance = 6;
-    showMinimap = false;
+    if (resetMinimap) showMinimap = false;
   } else {
     torchIntensity = 0.6;
     CONFIG.fogDistance = 12;
-    showMinimap = true;
+    if (resetMinimap) showMinimap = true;
   }
   // 同步滑桿與按鈕狀態
   if (typeof torchSlider !== 'undefined') {
@@ -2804,11 +2983,17 @@ function mapAt(x, y) {
 
 // --- 方塊類型常數 ---
 // 0=空地, 1=磚牆, 2=石牆(發光), 3=金屬板, 4=尖刺陷阱(可走但會受傷), 5=鎖門(需鑰匙), 6=鐵柵欄
+// v2.5 新增：7=冰面(滑行低摩擦), 8=崩落地板(踏上後倒數碎裂成牆)
 const TILE_EMPTY = 0, TILE_SPIKE = 4, TILE_DOOR = 5, TILE_BARS = 6;
+const TILE_ICE = 7;       // 冰面：可行走，移動慣性大、摩擦極低
+const TILE_CRUMBLE = 8;   // 崩落地板：可行走，踏上後倒數碎裂成牆
 // 可行走（腳踏上去不會被牆擋住）
-function isWalkable(v) { return v === 0 || v === TILE_SPIKE; }
+function isWalkable(v) { return v === 0 || v === TILE_SPIKE || v === TILE_ICE || v === TILE_CRUMBLE; }
 // 會阻擋光線投射與移動（視為牆）
 function isBlocking(v) { return v === 1 || v === 2 || v === 3 || v === TILE_DOOR || v === TILE_BARS; }
+// v2.5：新地板機制預留掛鉤判定函數（下一輪可直接掛成就/計數）
+function isIceTile(v) { return v === TILE_ICE; }
+function isCrumbleTile(v) { return v === TILE_CRUMBLE; }
 
 // --- 玩家 ---
 const player = {
@@ -2868,7 +3053,7 @@ function generateAndApplyRandomMap(sizeKey) {
     if (typeof items !== 'undefined') items.length = 0;
     if (typeof teleporters !== 'undefined') teleporters.length = 0;
     if (typeof gems !== 'undefined') gems.length = 0;
-    if (typeof projectiles !== 'undefined') projectiles.length = 0;
+    if (typeof projectiles !== 'undefined') clearProjectiles(); // v2.5：投射物池清空
   } catch (e) {}
 
   // 全部設為牆
@@ -2901,13 +3086,26 @@ function generateAndApplyRandomMap(sizeKey) {
     }
   }
   // 随機打通一些牆，增加環路（避免完美迷宮太單一）
-  // 環路率：打通牆格佔總格數的比例（參數化常數，便於日後調整）
-  const LOOP_RATE = 0.03;
-  const extraOpens = Math.floor((cols * rows) * LOOP_RATE);
+  // v2.4：環路率由 settings.mazeLoopRate 決定（0 / 0.03 / 0.08，預設 0.03 等同舊行為）
+  const LOOP_RATE = settings.mazeLoopRate !== undefined ? settings.mazeLoopRate : 0.03;
+  let extraOpens = Math.floor((cols * rows) * LOOP_RATE);
+  // v2.4：多分支模式 —— 在環路率基礎上額外打通一批內部牆，增加岔路
+  if (settings.mazeBranching === 'branch') {
+    extraOpens += Math.floor((cols * rows) * 0.05);
+  }
   for (let i = 0; i < extraOpens; i++) {
     const ox = 1 + Math.floor(Math.random() * (cols - 2));
     const oy = 1 + Math.floor(Math.random() * (rows - 2));
     map[oy][ox] = 0;
+  }
+
+  // v2.4：鏡射對稱 —— 左右鏡像，右半 = 左半翻轉
+  if (settings.mazeSymmetry) {
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < Math.floor(cols / 2); x++) {
+        map[y][cols - 1 - x] = map[y][x];
+      }
+    }
   }
 
   // 起點左上角、終點右下角
@@ -2943,7 +3141,7 @@ let itemInv = { shield: 0, grenade: 0, cannon: 0 }; // 道具欄庫存（有怪�
 let cannonAiming = false;  // 炮彈瞄準模式
 let cannonCd = 0;          // AI 炮彈冷卻
 let cannonTargets = [];    // 炮彈落點 {x,y,t}（t 倒數，1 秒後爆炸）
-let explosions = [];       // 爆炸視覺 {x,y,radius,t,color}
+// v2.4：原 `let explosions = []` 死變數全檔無讀寫，已移除
 let attackCooldown = 0;    // 攻擊冷卻
 let attackAnim = 0;        // 攻擊揮砍動畫時間
 let damageFlash = 0;       // 傷害暗角剩餘時間
@@ -2952,13 +3150,19 @@ let toastTimer = 0;        // 提示訊息計時
 // --- 每局成就追蹤 ---
 let runKills = 0;           // 本局擊殺數
 let runItemTypes = new Set(); // 本局拾取過的道具類型
+let runUsedItems = new Set(); // v2.5：本局實際使用過的戰鬥道具（護盾/手雷/炮彈/卷軸）
 let stepAccum = 0;           // 步數累積器
 let runDamaged = false;      // 本局是否受過真實傷害（毫髮無傷成就判定）
+let iceSlideDist = 0;        // v2.5：本局冰面滑行累計距離（ice_runner 成就用）
+let bloodMoonEverOn = false; // v2.5：本局血月是否曾經觸發（blood_moon_survivor 成就用）
+let crumbleEvacCount = 0;    // v2.5：本局崩落地板安全撤離次數（crumble_survivor 成就用）
+let silenceT = 0;            // v2.5：全團沉默剩餘秒數（治療術士被殺後觸發，期間敵人不施放特殊技能）
 
 // --- 增益狀態 ---
 const buffs = {
   speed: 0,      // 加速剩餘秒數
   invincible: 0, // 無敵星剩餘秒數
+  charm: false,  // v2.5：護符——受致命傷時消耗並無敵 2 秒
 };
 
 // --- 敵人系統 ---
@@ -2968,7 +3172,27 @@ let enemies = [];          // {x,y,hp,maxHp,speed,state,type,attackCd,hitFlash,d
 //       'swarm' (群聚速行, 橙, HP15, 極速) / 'boss' (迷宮守護者, 紅黑, HP300, 三階段)
 
 // --- 投射物系統 ---
-let projectiles = [];       // {x,y,dir,speed,damage,color,life,fromPlayer}
+// --- 投射物（v2.5：物件池預配置，消除 push/splice 的每幀 GC） ---
+const PROJ_POOL_SIZE = 64;
+const projectiles = new Array(PROJ_POOL_SIZE);
+for (let pj = 0; pj < PROJ_POOL_SIZE; pj++) {
+  projectiles[pj] = { x: 0, y: 0, dir: 0, speed: 0, damage: 0, color: [0, 0, 0], life: 0, fromPlayer: false, trailT: 0, active: false };
+}
+let projCursor = 0;
+let projActive = 0;
+// 統一投射物生成入口（寫入環狀池，取代各處 projectiles.push）
+function spawnProjectile(x, y, dir, speed, damage, color, life, fromPlayer) {
+  const pr = projectiles[projCursor];
+  pr.x = x; pr.y = y; pr.dir = dir; pr.speed = speed; pr.damage = damage;
+  pr.color = color; pr.life = life; pr.fromPlayer = fromPlayer; pr.trailT = 0; pr.active = true;
+  projCursor = (projCursor + 1) % PROJ_POOL_SIZE;
+  if (projActive < PROJ_POOL_SIZE) projActive++;
+}
+// v2.5：清空投射物池（取代舊 projectiles.length = 0）
+function clearProjectiles() {
+  for (const pr of projectiles) pr.active = false;
+  projCursor = 0; projActive = 0;
+}
 
 // --- 等級 / XP 系統（單局） ---
 const runXP = { level: 1, xp: 0, pending: 0, meleeBonus: 0 };
@@ -3050,6 +3274,35 @@ function updateDayNight() {
   if (el) el.textContent = dayPhaseName;
 }
 
+// v2.5：血月事件推進——觸發 / 倒數 / 結束。獨立事件層，不影響天氣系統本身。
+function updateBloodMoon(dt) {
+  if (bloodMoonActive) {
+    bloodMoonT -= dt;
+    if (bloodMoonT <= 0) {
+      bloodMoonActive = false;
+      bloodMoonT = 0;
+      showFloatText('血月退去', '#8c8');
+    }
+    return;
+  }
+  // 未觸發：條件齊全才擲骰
+  if (!settings.bloodMoon) return;                 // settings 開關
+  if (settings.monsterMode === 'none') return;     // 僅有怪模式
+  if (!settings.dayNightCycle) return;             // 無日夜循環則無「白天」基準
+  if (dayPhaseName !== '白天') return;             // 僅白天時段
+  bloodMoonRollCd -= dt;
+  if (bloodMoonRollCd > 0) return;
+  bloodMoonRollCd = BLOODMOON_ROLL_INTERVAL;
+  // 白天每 BLOODMOON_ROLL_INTERVAL 秒擲一次，約 8% 機率觸發
+  if (Math.random() < 0.08) {
+    bloodMoonActive = true;
+    bloodMoonT = BLOODMOON_DURATION;
+    bloodMoonEverOn = true; // v2.5：記錄本局血月曾觸發（blood_moon_survivor 成就用）
+    showFloatText('血月降臨！', '#f44');
+    if (!autoPlay) showToast('血月降臨：敵人狂暴加速！');
+  }
+}
+
 // --- 鑰匙 ---
 let keyItems = [];         // {x, y, collected, phase}
 let keyCount = 0;
@@ -3079,8 +3332,21 @@ let shakeTime = 0;        // 剩餘震動時間（秒）
 let shakeDuration = 0.15;
 let shakeAmp = 2.5;
 
-// --- 粒子系統 ---
-const particles = [];
+// --- 粒子系統（v2.5：物件池預配置，取代 push/shift/splice，消除每幀 GC） ---
+// 固定大小池 + 環狀寫入游標：新粒子覆寫最老粒子（等價原本「滿了 shift 丟最老」）。
+const PARTICLE_POOL_SIZE = 256;
+const particles = new Array(PARTICLE_POOL_SIZE);
+for (let pi = 0; pi < PARTICLE_POOL_SIZE; pi++) {
+  particles[pi] = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 0, maxLife: 0, color: [0, 0, 0], size: 0, active: false };
+}
+let particleCursor = 0;   // 下一個可寫入位置（環狀）
+let particleActive = 0;   // 目前活躍粒子數（上限受 particleLimit 節流）
+// v2.5：精靈繪製列表物件池——render() 每幀預配置 256 槽 + drawCount 計數，
+// 取代每幀 drawList=[] 並 push 大量小物件（消除 GC）。
+const DRAWLIST_POOL_SIZE = 256;
+const drawListPool = new Array(DRAWLIST_POOL_SIZE);
+for (let dl = 0; dl < DRAWLIST_POOL_SIZE; dl++) drawListPool[dl] = { depth: 0, kind: '', ref: null };
+let drawCount = 0;
 // 粒子密度上限 particleLimit 已於上方宣告（依 settings.particleDensity 動態調整）
 let endParticleTimer = 0;
 
@@ -3095,6 +3361,27 @@ let crouching = false;       // 蹲下潛行中
 let comboHudEl = null;        // 連擊 HUD（JS 動態建立）
 let combo20Fired = false;     // 連擊 20 成就只觸發一次
 let heartTimer = 0;          // 低血心跳節奏計時
+
+// ============================================================
+//  v2.5：崩落地板（tile 8）狀態
+//  crumbleTimers：已被玩家踏上、正在倒數的崩落格（key=y*W+x → 剩餘秒數）
+//  crumbleWarnSet：倒數最後 0.3 秒的格（地板渲染疊紅色閃爍警示）
+// ============================================================
+const CRUMBLE_FUSE = 1.2;     // 踏上後碎裂總倒數（秒）
+const CRUMBLE_WARN = 0.3;     // 碎裂前 0.3 秒開始紅色閃爍警示
+let crumbleTimers = new Map();
+let crumbleWarnSet = new Set();
+
+// ============================================================
+//  v2.5：血月事件狀態（獨立於天氣系統的事件層）
+//  僅有怪模式、白天時段隨機觸發，持續 30 秒：全畫面紅色偏色、敵速×1.3、
+//  敵人眼睛發光；期間暫停晝夜推進。下一輪可直接掛「血月倖存」成就。
+// ============================================================
+const BLOODMOON_DURATION = 30;      // 事件持續秒數
+const BLOODMOON_ROLL_INTERVAL = 8; // 白天每 8 秒擲一次觸發機率
+let bloodMoonActive = false;
+let bloodMoonT = 0;                 // 剩餘持續秒數
+let bloodMoonRollCd = 0;            // 距下次擲骰冷卻
 
 // --- 腳步聲計時 ---
 let stepTimer = 0;
@@ -3957,8 +4244,8 @@ function renderGod3D(g, CW, CH) {
     g.arc(c.x, c.y, Math.max(2, S * 0.22), 0, Math.PI * 2);
     g.fill();
   }
-  // 敵人（3D 小圓柱）
-  const eColor = { chaser: '#ff4d4d', patrol: '#c9d23a', shooter: '#a24dff', tank: '#9aa0ad', swarm: '#ff9a3c', boss: '#ff2b2b', splitter: '#ff7ad9' };
+  // 敵人（3D 小圓柱）；v2.5：lurker 在上帝視角固定以青灰顯示位置（不因隱形而消失）
+  const eColor = { chaser: '#ff4d4d', patrol: '#c9d23a', shooter: '#a24dff', tank: '#9aa0ad', swarm: '#ff9a3c', boss: '#ff2b2b', splitter: '#ff7ad9', lurker: '#8fb0b8' };
   for (const e of enemies) {
     if (e.state === 'dead') continue;
     const col = eColor[e.type] || '#f66';
@@ -4219,6 +4506,24 @@ function render() {
           const bright = 130 + rise * 110;
           baseR = bright; baseG = 40; baseB = 40;
         }
+      } else if (mapAt(cellMX, cellMY) === TILE_ICE) {
+        // v2.5：冰面——冰藍色棋盤，略帶高光反射感
+        baseR = tile ? 120 : 95;
+        baseG = tile ? 195 : 165;
+        baseB = tile ? 225 : 195;
+        // 微弱高光閃爍（冰晶反光）
+        const sparkle = (Math.sin(floorX * 6.3 + floorY * 4.1) * 0.5 + 0.5) * 12;
+        baseR += sparkle; baseG += sparkle; baseB += sparkle;
+      } else if (mapAt(cellMX, cellMY) === TILE_CRUMBLE) {
+        // v2.5：崩落地板——灰褐基底；倒數中依 crackState 紅色警示閃爍
+        baseR = tile ? 90 : 70;
+        baseG = tile ? 78 : 60;
+        baseB = tile ? 70 : 55;
+        // 倒數最後 0.3 秒紅色警示（由 updateCrumbleTiles 寫入 crumbleWarn 集合）
+        if (crumbleWarnSet && crumbleWarnSet.has(cellMY * MAP_W + cellMX)) {
+          const blink = (Math.floor(frameNow / 90) % 2 === 0) ? 55 : 0;
+          baseR += blink; baseG *= 0.5; baseB *= 0.5;
+        }
       } else {
         baseR = tile ? 50 : 40;
         baseG = tile ? 48 : 38;
@@ -4267,14 +4572,21 @@ function render() {
 
   // --- 精靈渲染：光柱 / 寶石 / 粒子，統一依深度由遠到近排序後繪製 ---
   const invDetSpr = 1.0 / (planeX * dirY - dirX * planeY);
-  const drawList = [];
+  // v2.5：drawList 改為預配置池（drawListPool + drawCount），取代每幀 new Array 與 push 小物件
+  drawCount = 0;
+  const addDraw = (depth, kind, ref) => {
+    if (drawCount >= DRAWLIST_POOL_SIZE) return;
+    const slot = drawListPool[drawCount];
+    slot.depth = depth; slot.kind = kind; slot.ref = ref;
+    drawCount++;
+  };
 
   // 收集終點光柱
   if (!gameWon) {
     const sX = END.x - player.x, sY = END.y - player.y;
     const tY = invDetSpr * (-planeY * sX + planeX * sY);
     if (tY > 0.1) {
-      drawList.push({ depth: tY, kind: 'beam' });
+      addDraw(tY, 'beam', null);
     }
   }
   // 收集寶石
@@ -4283,7 +4595,7 @@ function render() {
     const sX = gem.x - player.x, sY = gem.y - player.y;
     const tY = invDetSpr * (-planeY * sX + planeX * sY);
     if (tY <= 0.1) continue;
-    drawList.push({ depth: tY, kind: 'gem', ref: gem });
+    addDraw(tY, 'gem', gem);
   }
   // 收集敵人
   for (const e of enemies) {
@@ -4291,7 +4603,7 @@ function render() {
     const sX = e.x - player.x, sY = e.y - player.y;
     const tY = invDetSpr * (-planeY * sX + planeX * sY);
     if (tY <= 0.1) continue;
-    drawList.push({ depth: tY, kind: 'enemy', ref: e });
+    addDraw(tY, 'enemy', e);
   }
   // 收集鑰匙
   for (const k of keyItems) {
@@ -4299,7 +4611,7 @@ function render() {
     const sX = k.x - player.x, sY = k.y - player.y;
     const tY = invDetSpr * (-planeY * sX + planeX * sY);
     if (tY <= 0.1) continue;
-    drawList.push({ depth: tY, kind: 'key', ref: k });
+    addDraw(tY, 'key', k);
   }
   // 收集道具
   for (const it of items) {
@@ -4307,32 +4619,40 @@ function render() {
     const sX = it.x - player.x, sY = it.y - player.y;
     const tY = invDetSpr * (-planeY * sX + planeX * sY);
     if (tY <= 0.1) continue;
-    drawList.push({ depth: tY, kind: 'item', ref: it });
+    addDraw(tY, 'item', it);
   }
-  // 收集粒子（跳過遠處/不可見）
+  // 收集粒子（跳過已死亡/遠處/不可見；v2.5 物件池需檢查 active）
   for (const p of particles) {
+    if (!p.active || p.life <= 0) continue;
     const sX = p.x - player.x, sY = p.y - player.y;
     const tY = invDetSpr * (-planeY * sX + planeX * sY);
     if (tY <= 0.1) continue;
-    drawList.push({ depth: tY, kind: 'particle', ref: p });
+    addDraw(tY, 'particle', p);
   }
-  // 收集投射物
+  // 收集投射物（v2.5 物件池需檢查 active）
   for (const pr of projectiles) {
+    if (!pr.active) continue;
     const sX = pr.x - player.x, sY = pr.y - player.y;
     const tY = invDetSpr * (-planeY * sX + planeX * sY);
     if (tY <= 0.1) continue;
-    drawList.push({ depth: tY, kind: 'proj', ref: pr });
+    addDraw(tY, 'proj', pr);
   }
   // 收集幽靈玩家（半透明白色精靈）
   if (ghostMode && ghost) {
     const sX = ghost.x - player.x, sY = ghost.y - player.y;
     const tY = invDetSpr * (-planeY * sX + planeX * sY);
-    if (tY > 0.1) drawList.push({ depth: tY, kind: 'ghost' });
+    if (tY > 0.1) addDraw(tY, 'ghost', null);
   }
-  // 遠 → 近
-  drawList.sort((a, b) => b.depth - a.depth);
+  // 遠 → 近（v2.5：僅排序前 drawCount 個槽位，插入排序 n 小可忽略）
+  for (let i = 1; i < drawCount; i++) {
+    const key = drawListPool[i];
+    let j = i - 1;
+    while (j >= 0 && drawListPool[j].depth < key.depth) { drawListPool[j + 1] = drawListPool[j]; j--; }
+    drawListPool[j + 1] = key;
+  }
 
-  for (const sp of drawList) {
+  for (let di = 0; di < drawCount; di++) {
+    const sp = drawListPool[di];
     if (sp.kind === 'beam') {
       const tY = sp.depth;
       const sX = END.x - player.x, sY = END.y - player.y;
@@ -4398,16 +4718,11 @@ function render() {
           const glow = (1 - absRelX) * (1 - Math.abs(dyR) * 0.5);
           const a = glow * 0.9;
           const pi = (y * W + stripe) * 4;
-          // 色盲模式：寶石用黃色（與青藍區分）
-          if (settings.colorblind) {
-            buf[pi]   = buf[pi]   * (1 - a) + 255 * a;
-            buf[pi+1] = buf[pi+1] * (1 - a) + 220 * a;
-            buf[pi+2] = buf[pi+2] * (1 - a) + 50 * a;
-          } else {
-            buf[pi]   = buf[pi]   * (1 - a) + 100 * a;
-            buf[pi+1] = buf[pi+1] * (1 - a) + 255 * a;
-            buf[pi+2] = buf[pi+2] * (1 - a) + 255 * a;
-          }
+          // v2.4：寶石顏色依色盲模式（getGemRGB）
+          const gemRGB = getGemRGB();
+          buf[pi]   = buf[pi]   * (1 - a) + gemRGB[0] * a;
+          buf[pi+1] = buf[pi+1] * (1 - a) + gemRGB[1] * a;
+          buf[pi+2] = buf[pi+2] * (1 - a) + gemRGB[2] * a;
         }
       }
     } else if (sp.kind === 'enemy') {
@@ -4431,11 +4746,10 @@ function render() {
       let cr, cg, cb;
       if (e.hitFlash > 0) { cr = cg = cb = 255; }
       else if (e.type === 'chaser') {
-        cr = settings.colorblind ? 200 : 255;
-        cg = settings.colorblind ? 80 : 60;
-        cb = settings.colorblind ? 255 : 60;
+        // v2.4：依色盲模式映射色盤
+        const c = getEnemyRGB('chaser'); cr = c[0]; cg = c[1]; cb = c[2];
       } else if (e.type === 'shooter') {
-        cr = 180; cg = 80; cb = 255;
+        const c = getEnemyRGB('shooter'); cr = c[0]; cg = c[1]; cb = c[2];
       } else if (e.type === 'tank') {
         cr = 90; cg = 90; cb = 100;
       } else if (e.type === 'swarm') {
@@ -4455,10 +4769,15 @@ function render() {
         cr = berserk ? 255 : (enraged ? 255 : 180);
         cg = berserk ? 140 : (enraged ? 40 : 20);
         cb = berserk ? 70 : (enraged ? 40 : 30);
+      } else if (e.type === 'lurker') {
+        // v2.5：潛伏者半透青灰色；透明度由下方 lurkerAlpha 控制（未現身近乎隱形）
+        cr = 120; cg = 150; cb = 160;
+      } else if (e.type === 'healer') {
+        // v2.5：治療術士——翡翠綠（色盲模式對應 getEnemyRGB('healer')）
+        const c = getEnemyRGB('healer'); cr = c[0]; cg = c[1]; cb = c[2];
       } else {
-        cr = settings.colorblind ? 255 : 180;
-        cg = settings.colorblind ? 160 : 255;
-        cb = settings.colorblind ? 40 : 80;
+        // patrol（巡邏兵）：依色盲模式映射色盤
+        const c = getEnemyRGB('patrol'); cr = c[0]; cg = c[1]; cb = c[2];
       }
 
       for (let stripe = Math.max(0, drawStartX); stripe < Math.min(W, drawEndX); stripe++) {
@@ -4475,11 +4794,22 @@ function render() {
           let glow = (1 - absRelX) * (0.6 - Math.abs(dyR) * 0.3);
           // Boss 階段3 紅色光暈
           if (e.type === 'boss' && e.hp < e.maxHp * 0.33) glow += 0.25;
-          const a = Math.max(0, glow) * 0.9;
+          // v2.5：潛伏者未現身時透明度壓到 0.12~0.15（近乎隱形），現身則正常
+          let lurkerAlpha = 1.0;
+          if (e.type === 'lurker') lurkerAlpha = e.revealed ? 1.0 : 0.13;
+          let a = Math.max(0, glow) * 0.9 * lurkerAlpha;
+          // v2.5：血月期間敵人眼睛發光——頭部區域疊加紅色高亮光點
+          let drawR = cr, drawG = cg, drawB = cb;
+          if (typeof bloodMoonActive !== 'undefined' && bloodMoonActive && dyR < -0.3) {
+            const eyeGlow = 0.55;
+            drawR = cr * (1 - eyeGlow) + 255 * eyeGlow;
+            drawG = cg * (1 - eyeGlow);
+            drawB = cb * (1 - eyeGlow);
+          }
           const pi = (y * W + stripe) * 4;
-          buf[pi]   = buf[pi]   * (1 - a) + cr * a;
-          buf[pi+1] = buf[pi+1] * (1 - a) + cg * a;
-          buf[pi+2] = buf[pi+2] * (1 - a) + cb * a;
+          buf[pi]   = buf[pi]   * (1 - a) + drawR * a;
+          buf[pi+1] = buf[pi+1] * (1 - a) + drawG * a;
+          buf[pi+2] = buf[pi+2] * (1 - a) + drawB * a;
           void headGlow;
         }
         // HP 條（在精靈頭頂）
@@ -4591,6 +4921,8 @@ function render() {
       else if (it.type === 'reveal') { cr = 200; cg = 120; cb = 255; }
       else if (it.type === 'grenade') { cr = 255; cg = 140; cb = 40; }
       else if (it.type === 'cannon') { cr = 255; cg = 70; cb = 70; }
+      else if (it.type === 'scroll') { cr = 220; cg = 200; cb = 255; } // v2.5 閃電卷軸：白紫電光
+      else if (it.type === 'charm') { cr = 120; cg = 255; cb = 180; } // v2.5 護符：翠綠護身
       else { cr = 255; cg = 220; cb = 80; }
       for (let stripe = Math.max(0, drawStartX); stripe < Math.min(W, drawEndX); stripe++) {
         if (tY >= zBuffer[stripe]) continue;
@@ -4812,7 +5144,8 @@ function renderMinimap() {
         miniCtx.lineWidth = 1;
         miniCtx.stroke();
       } else {
-        miniCtx.fillStyle = '#f44';
+        // v2.5：潛伏者在小地圖固定以青灰點顯示位置（否則隱形無法反制）
+        miniCtx.fillStyle = (e.type === 'lurker') ? '#8fb0b8' : '#f44';
         miniCtx.beginPath();
         miniCtx.arc(e.x * cellW, e.y * cellH, 2.5, 0, Math.PI * 2);
         miniCtx.fill();
@@ -4934,10 +5267,49 @@ function canMove(nx, ny) {
 }
 
 // ============================================================
+//  v2.5：冰面滑行物理（tile 7）
+//  腳下是冰面時摩擦極低（≈0.92 慣性）：輸入力小、鬆開按鍵仍會滑行一段；
+//  離開冰面立刻歸零慣性、恢復正常物理。手動與自動遊玩共用同一套移動。
+// ============================================================
+let slideVX = 0, slideVY = 0;   // 滑行慣性速度（格/秒）
+function underIceTile() { return isIceTile(mapAt(Math.floor(player.x), Math.floor(player.y))); }
+function movePlayerWithSlide(desiredDx, desiredDy, dt) {
+  if (underIceTile() && dashState.active <= 0) {
+    // 冰面：期望位移換算速度目標，小加速度疊加（起步慢），摩擦衰減保留慣性
+    const targetVX = desiredDx / dt;
+    const targetVY = desiredDy / dt;
+    const accel = 0.16; // 冰面起步加速度係數（越小越難加速、越滑）
+    slideVX += (targetVX - slideVX) * accel;
+    slideVY += (targetVY - slideVY) * accel;
+    const fric = Math.pow(0.92, dt * 60); // ≈0.92 慣性：鬆開按鍵仍滑行
+    slideVX *= fric; slideVY *= fric;
+    // 速度上限（避免單向無限加速）
+    const sp = Math.hypot(slideVX, slideVY);
+    const maxSp = player.moveSpeed * 2.4;
+    if (sp > maxSp) { slideVX *= maxSp / sp; slideVY *= maxSp / sp; }
+    const ix = slideVX * dt, iy = slideVY * dt;
+    if (canMove(player.x + ix, player.y)) player.x += ix; else slideVX *= 0.3;
+    if (canMove(player.x, player.y + iy)) player.y += iy; else slideVY *= 0.3;
+    // v2.5：累計冰面滑行距離（ice_runner 成就：滿 50 步解鎖）
+    iceSlideDist += Math.hypot(ix, iy);
+    if (iceSlideDist >= 50) unlockAchievement('ice_runner');
+  } else {
+    // 一般地面：立刻歸零慣性，直接位移（行為與改動前完全一致）
+    slideVX = 0; slideVY = 0;
+    if (canMove(player.x + desiredDx, player.y)) player.x += desiredDx;
+    if (canMove(player.x, player.y + desiredDy)) player.y += desiredDy;
+  }
+}
+
+// ============================================================
 //  音效系統（Web Audio API 程序生成）
 // ============================================================
 let audioCtx = null;
 let masterGain = null;
+// v2.4：音效分軌 —— musicGain（BGM）/ sfxGain（所有 play* 音效）/ envGain（雨聲等環境音）
+let musicGain = null;
+let sfxGain = null;
+let envGain = null;
 
 function initAudio() {
   if (audioCtx) {
@@ -4949,13 +5321,23 @@ function initAudio() {
     masterGain = audioCtx.createGain();
     masterGain.gain.value = settings.soundOn ? 0.5 : 0;
     masterGain.connect(audioCtx.destination);
+    // 三條分軌掛在 masterGain 下游，各自再乘上使用者音量
+    musicGain = audioCtx.createGain(); musicGain.gain.value = settings.musicVol;
+    sfxGain = audioCtx.createGain();   sfxGain.gain.value = settings.sfxVol;
+    envGain = audioCtx.createGain();   envGain.gain.value = settings.envVol;
+    musicGain.connect(sfxGain);
+    sfxGain.connect(sfxGain);
+    envGain.connect(sfxGain);
   } catch (e) { audioCtx = null; }
 }
 
-// 套用音效開關到主音量
+// 套用音效開關到主音量（同時重刷三條分軌音量）
 function applySoundVolume() {
   if (!masterGain) return;
   masterGain.gain.value = settings.soundOn ? 0.5 : 0;
+  if (musicGain) musicGain.gain.value = settings.musicVol;
+  if (sfxGain)   sfxGain.gain.value   = settings.sfxVol;
+  if (envGain)   envGain.gain.value   = settings.envVol;
 }
 
 // 音效節點結束後主動斷開，避免殘留連線
@@ -4985,7 +5367,7 @@ function playStep(running) {
   filter.frequency.value = running ? 400 : 250;
   const gain = audioCtx.createGain();
   gain.gain.value = running ? 0.12 : 0.08;
-  src.connect(filter); filter.connect(gain); gain.connect(masterGain);
+  src.connect(filter); filter.connect(gain); gain.connect(sfxGain);
   src.start();
   cleanupOnEnded(src, [filter, gain]);
 }
@@ -5000,7 +5382,7 @@ function playWallHit() {
   osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.1);
   gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
-  osc.connect(gain); gain.connect(masterGain);
+  osc.connect(gain); gain.connect(sfxGain);
   osc.start(); osc.stop(audioCtx.currentTime + 0.13);
   cleanupOnEnded(osc, [gain]);
 }
@@ -5017,7 +5399,7 @@ function playCollect() {
     gain.gain.setValueAtTime(0.0001, now + idx * 0.07);
     gain.gain.exponentialRampToValueAtTime(0.2, now + idx * 0.07 + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.15);
-    osc.connect(gain); gain.connect(masterGain);
+    osc.connect(gain); gain.connect(sfxGain);
     osc.start(now + idx * 0.07); osc.stop(now + idx * 0.07 + 0.16);
     cleanupOnEnded(osc, [gain]);
   });
@@ -5036,7 +5418,7 @@ function playWin() {
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.exponentialRampToValueAtTime(0.18, now + 0.1);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-    osc.connect(gain); gain.connect(masterGain);
+    osc.connect(gain); gain.connect(sfxGain);
     osc.start(now); osc.stop(now + 0.65);
     cleanupOnEnded(osc, [gain]);
   });
@@ -5053,7 +5435,7 @@ function playClick() {
   osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
   gain.gain.setValueAtTime(0.08, now);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-  osc.connect(gain); gain.connect(masterGain);
+  osc.connect(gain); gain.connect(sfxGain);
   osc.start(now); osc.stop(now + 0.07);
   cleanupOnEnded(osc, [gain]);
 }
@@ -5073,7 +5455,7 @@ function playHover() {
   osc.frequency.exponentialRampToValueAtTime(1600, now + 0.03);
   gain.gain.setValueAtTime(0.035, now);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-  osc.connect(gain); gain.connect(masterGain);
+  osc.connect(gain); gain.connect(sfxGain);
   osc.start(now); osc.stop(now + 0.05);
   cleanupOnEnded(osc, [gain]);
 }
@@ -5082,13 +5464,13 @@ function playHover() {
 // 立體聲定位：pan 範圍 -1(左) ~ 1(右)；不支援 StereoPanner 則直連主音量
 function connectWithPan(sourceOut, pan) {
   if (pan === undefined || pan === 0 || !audioCtx.createStereoPanner) {
-    sourceOut.connect(masterGain);
+    sourceOut.connect(sfxGain);
     return;
   }
   const panner = audioCtx.createStereoPanner();
   panner.pan.value = Math.max(-1, Math.min(1, pan));
   sourceOut.connect(panner);
-  panner.connect(masterGain);
+  panner.connect(sfxGain);
 }
 // 依敵人相對玩家方位計算 pan（-1~1）
 function panForEnemy(e) {
@@ -5111,7 +5493,7 @@ function playHeartbeat(strength) {
     gain.gain.setValueAtTime(0.0001, now + off);
     gain.gain.exponentialRampToValueAtTime(0.14 * strength, now + off + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.001, now + off + 0.14);
-    osc.connect(gain); gain.connect(masterGain);
+    osc.connect(gain); gain.connect(sfxGain);
     osc.start(now + off); osc.stop(now + off + 0.16);
     cleanupOnEnded(osc, [gain]);
   });
@@ -5151,7 +5533,7 @@ function playHit() {
   osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
   gain.gain.setValueAtTime(0.2, now);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-  osc.connect(gain); gain.connect(masterGain);
+  osc.connect(gain); gain.connect(sfxGain);
   osc.start(now); osc.stop(now + 0.13);
   cleanupOnEnded(osc, [gain]);
 }
@@ -5199,7 +5581,7 @@ function playPlayerHurt() {
   osc.frequency.exponentialRampToValueAtTime(70, now + 0.2);
   gain.gain.setValueAtTime(0.25, now);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-  osc.connect(gain); gain.connect(masterGain);
+  osc.connect(gain); gain.connect(sfxGain);
   osc.start(now); osc.stop(now + 0.26);
   cleanupOnEnded(osc, [gain]);
 }
@@ -5216,7 +5598,7 @@ function playTrap() {
   osc.frequency.exponentialRampToValueAtTime(300, now + 0.08);
   gain.gain.setValueAtTime(0.12, now);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-  osc.connect(gain); gain.connect(masterGain);
+  osc.connect(gain); gain.connect(sfxGain);
   osc.start(now); osc.stop(now + 0.11);
   cleanupOnEnded(osc, [gain]);
 }
@@ -5233,7 +5615,7 @@ function playKey() {
     gain.gain.setValueAtTime(0.0001, now + idx * 0.05);
     gain.gain.exponentialRampToValueAtTime(0.15, now + idx * 0.05 + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.2);
-    osc.connect(gain); gain.connect(masterGain);
+    osc.connect(gain); gain.connect(sfxGain);
     osc.start(now + idx * 0.05); osc.stop(now + idx * 0.05 + 0.22);
     cleanupOnEnded(osc, [gain]);
   });
@@ -5251,7 +5633,7 @@ function playDoorOpen() {
   osc.frequency.linearRampToValueAtTime(160, now + 0.2);
   gain.gain.setValueAtTime(0.2, now);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-  osc.connect(gain); gain.connect(masterGain);
+  osc.connect(gain); gain.connect(sfxGain);
   osc.start(now); osc.stop(now + 0.26);
   cleanupOnEnded(osc, [gain]);
 }
@@ -5269,7 +5651,7 @@ function playItemPickup(type) {
     gain.gain.setValueAtTime(0.0001, now + idx * 0.08);
     gain.gain.exponentialRampToValueAtTime(0.18, now + idx * 0.08 + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
-    osc.connect(gain); gain.connect(masterGain);
+    osc.connect(gain); gain.connect(sfxGain);
     osc.start(now + idx * 0.08); osc.stop(now + idx * 0.08 + 0.27);
     cleanupOnEnded(osc, [gain]);
   });
@@ -5287,7 +5669,7 @@ function playLevelUp() {
     gain.gain.setValueAtTime(0.0001, now + idx * 0.09);
     gain.gain.exponentialRampToValueAtTime(0.2, now + idx * 0.09 + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.35);
-    osc.connect(gain); gain.connect(masterGain);
+    osc.connect(gain); gain.connect(sfxGain);
     osc.start(now + idx * 0.09); osc.stop(now + idx * 0.09 + 0.4);
     cleanupOnEnded(osc, [gain]);
   });
@@ -5304,7 +5686,7 @@ function playBossDie() {
   osc.frequency.exponentialRampToValueAtTime(40, now + 1.2);
   gain.gain.setValueAtTime(0.25, now);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
-  osc.connect(gain); gain.connect(masterGain);
+  osc.connect(gain); gain.connect(sfxGain);
   osc.start(now); osc.stop(now + 1.5);
   cleanupOnEnded(osc, [gain]);
   noiseBurst(200, 0.6, 0.3, 'lowpass');
@@ -5506,6 +5888,18 @@ function makeEnemyOfType(type, c) {
     const h = scale(90);
     return { ...base, type, hp: h, maxHp: h, speed: 0, touchDmg: 10, beamAng: Math.random() * Math.PI * 2, beamHitCd: 0 };
   }
+  // v2.5：lurker 潛伏者——平時近乎隱形（半透青灰），玩家距離 <2.5 格才現身並加速衝刺
+  // revealed 由 updateEnemies 依距離動態更新；hp 40 / 觸傷 15 / 經驗 25
+  if (type === 'lurker') {
+    const h = scale(40);
+    return { ...base, type, hp: h, maxHp: h, speed: 1.4, touchDmg: 15, revealed: false };
+  }
+  // v2.5：healer 治療術士——不主動攻擊，固定站離戰鬥 6 格外，
+  // 每 3 秒為半徑 4 內最弱友軍回 20 HP；被殺後全團沉默 5 秒（specialT 治療冷卻）
+  if (type === 'healer') {
+    const h = scale(50);
+    return { ...base, type, hp: h, maxHp: h, speed: 0, touchDmg: 5, healT: 3 };
+  }
   // patrol 預設
   const h = scale(30);
   return { ...base, type: 'patrol', hp: h, maxHp: h, speed: 1.3, touchDmg: 10 };
@@ -5532,9 +5926,15 @@ function generateEnemies() {
   if (area >= 19*19) pool.push('splitter'); // 分裂體（小權重，入池一次）
   // 炸彈兵 / 旋轉哨兵：僅 medium 以上迷宮，低權重（各入池一次）
   if (area >= 23*23) { pool.push('bomber'); pool.push('sentinel'); }
+  // v2.5：潛伏者 lurker 僅在大地圖（面積 ≥23×23）入生成池
+  if (area >= 23*23) { pool.push('lurker'); }
+  // v2.5：治療術士 healer 僅 medium 以上迷宮（面積 ≥21×21）入池，低權重
+  if (area >= 21*21) { pool.push('healer'); }
   let swarmSpawned = false;
   for (let i = 0; i < count; i++) {
     let type = pool[Math.floor(Math.random() * pool.length)];
+    // v2.5 平衡：swarm 每局最多 1 群——已成群後再次 roll 到 swarm 則降級為巡邏者
+    if (type === 'swarm' && swarmSpawned) type = 'patrol';
     // swarm 以 3-5 隻成群
     if (type === 'swarm' && !swarmSpawned) {
       swarmSpawned = true;
@@ -5556,7 +5956,10 @@ function generateEnemies() {
     const bc = candidates[candidates.length - 1];
     const boss = makeEnemyOfType('patrol', bc);
     boss.type = 'boss';
-    boss.hp = 300; boss.maxHp = 300;
+    // v2.5 平衡：Boss HP 依迷宮面積與難度縮放（基礎 300 起，越大/越難越高）
+    const diffBossMult = { easy: 0.85, normal: 1.0, hard: 1.3, nightmare: 1.6 }[settings.difficulty] || 1.0;
+    const bossHp = Math.max(300, Math.round(300 * Math.sqrt(area / (24 * 24)) * diffBossMult));
+    boss.hp = bossHp; boss.maxHp = bossHp;
     boss.speed = 1.2; boss.touchDmg = 25;
     boss.summonT = 5;
     boss.patrolPath = null; boss.patrolIdx = 0; // 全圖巡邏路徑（延遲初始化）
@@ -5626,10 +6029,10 @@ function generateItems() {
   // 有怪模式才有戰鬥道具（護盾/手雷/炮彈）；無怪模式只出輔助道具
   const types = settings.monsterMode === 'none'
     ? ['health', 'speed', 'star', 'crystal', 'xpgem', 'maxup', 'reveal']
-    : ['health', 'speed', 'shield', 'star', 'crystal', 'xpgem', 'maxup', 'reveal', 'grenade', 'cannon'];
+    : ['health', 'speed', 'shield', 'star', 'crystal', 'xpgem', 'maxup', 'reveal', 'grenade', 'cannon', 'scroll', 'charm'];
   const weights = settings.monsterMode === 'none'
     ? [4, 3, 2, 2, 2, 1, 1]
-    : [3, 2, 2, 2, 1, 2, 1, 1, 1.5, 1.2];
+    : [3, 2, 2, 2, 1, 2, 1, 1, 1.5, 1.2, 1.0, 0.8];
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const count = Math.min(2 + Math.floor(Math.random() * 3), candidates.length);
   for (let i = 0; i < count; i++) {
@@ -5677,7 +6080,13 @@ function spawnCustomEntityActors() {
       // 依屬性面板選擇的敵人類型生成；boss/bomber/sentinel 等由玩法端 makeEnemyOfType 支援
       const et = e.enemyType || 'patrol';
       const actor = makeEnemyOfType(et, { x: e.x, y: e.y });
-      if (et === 'boss') { actor.type = 'boss'; actor.hp = 300; actor.maxHp = 300; actor.speed = 1.2; actor.touchDmg = 25; actor.summonT = 5; actor.patrolPath = null; actor.patrolIdx = 0; bossRef = actor; }
+      if (et === 'boss') {
+        actor.type = 'boss';
+        // v2.5 平衡：編輯器放置的 Boss 同樣依面積/難度縮放 HP
+        const diffBossMult = { easy: 0.85, normal: 1.0, hard: 1.3, nightmare: 1.6 }[settings.difficulty] || 1.0;
+        const bossHp = Math.max(300, Math.round(300 * Math.sqrt((MAP_W * MAP_H) / (24 * 24)) * diffBossMult));
+        actor.hp = bossHp; actor.maxHp = bossHp; actor.speed = 1.2; actor.touchDmg = 25; actor.summonT = 5; actor.patrolPath = null; actor.patrolIdx = 0; bossRef = actor;
+      }
       enemies.push(actor);
     } else if (e.type === 'item' && isWalkable(mapAt(e.x, e.y))) {
       const types = ['health', 'speed', 'shield', 'star'];
@@ -5732,6 +6141,9 @@ function updateBuffsHUD() {
   }
   if (shieldActive) {
     html += `<div class="buff-chip" style="border-color:#cdf;color:#cdf;"><span class="buff-icon" style="background:#cdf;"></span>護盾</div>`;
+  }
+  if (buffs.charm) {
+    html += `<div class="buff-chip" style="border-color:#7f8;color:#7f8;"><span class="buff-icon" style="background:#7f8;"></span>護符備用</div>`;
   }
   container.innerHTML = html;
 }
@@ -5858,7 +6270,7 @@ function playBossWarning() {
     gain.gain.setValueAtTime(0.0001, now + idx * 0.35);
     gain.gain.exponentialRampToValueAtTime(0.22, now + idx * 0.35 + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.35 + 0.32);
-    osc.connect(gain); gain.connect(masterGain);
+    osc.connect(gain); gain.connect(sfxGain);
     osc.start(now + idx * 0.35); osc.stop(now + idx * 0.35 + 0.35);
     cleanupOnEnded(osc, [gain]);
   });
@@ -5871,12 +6283,21 @@ function damagePlayer(amount, cause) {
   if (autoPlay) return false;           // 自動遊玩無敵
   if (buffs.invincible > 0) return false; // 無敵星
   if (invulnTimer > 0) return false;     // 陷阱無敵幀
-  // AI：受傷前一刻自動使用護盾道具
-  if (autoPlay && itemInv.shield > 0 && shieldImmuneT <= 0) useShieldItem();
+  // v2.4：上方 autoPlay 已提早 return，此行原「AI 自動開護盾」為永不執行的死碼（AI 護盾實際在 updateAutoPlay），移除
   if (shieldImmuneT > 0) return false;   // 護盾道具：5 秒免疫
   if (shieldActive) {               // 舊護盾吸收（相容）
     shieldActive = false;
     playItemPickup('shield');
+    updateBuffsHUD();
+    return false;
+  }
+  // v2.5：護符——扣血前自動消耗，無敵 2 秒並回滿視覺（不計入 runDamaged）
+  if (buffs.charm) {
+    buffs.charm = false;
+    invulnTimer = Math.max(invulnTimer, 2);
+    playItemPickup('star');
+    spawnParticle(player.x, player.y, 0.6, 0, 0, 1.5, 0.5, [120, 255, 180], 3);
+    showToast('護符發動！無敵 2 秒！');
     updateBuffsHUD();
     return false;
   }
@@ -5906,7 +6327,7 @@ function die() {
     player.x = checkpoint.x;
     player.y = checkpoint.y;
     invulnTimer = 1.5;
-    projectiles.length = 0;
+    clearProjectiles(); // v2.5：投射物池清空
     updateHpHUD();
     showToast('已從寶石檢查點重生');
     return;
@@ -5930,14 +6351,20 @@ function die() {
   document.getElementById('death-screen').style.display = 'flex';
   clearKeys();
   if (document.pointerLockElement) document.exitPointerLock();
+  // v2.4：死亡畫面關閉環境雨聲（否則雨聲會延續到死亡畫面）
+  if (typeof stopRainSound === 'function') stopRainSound();
 }
 
 // ============================================================
 //  粒子系統
 // ============================================================
 function spawnParticle(x, y, z, vx, vy, vz, life, color, size) {
-  if (particles.length >= particleLimit) particles.shift(); // 丟棄最老
-  particles.push({ x, y, z, vx, vy, vz, life, maxLife: life, color, size });
+  // v2.5：寫入環狀池游標位置；活躍數達 particleLimit 時游標所指即最老粒子，直接覆寫
+  const p = particles[particleCursor];
+  p.x = x; p.y = y; p.z = z; p.vx = vx; p.vy = vy; p.vz = vz;
+  p.life = life; p.maxLife = life; p.color = color; p.size = size; p.active = true;
+  particleCursor = (particleCursor + 1) % PARTICLE_POOL_SIZE;
+  if (particleActive < particleLimit) particleActive++;
 }
 
 // 寶石收集爆發
@@ -5970,10 +6397,12 @@ function spawnEndDust() {
 }
 
 function updateParticles(dt) {
-  for (let i = particles.length - 1; i >= 0; i--) {
+  // v2.5：遍歷整個預配置池，死亡粒子標 active=false（不 splice、不配置）
+  for (let i = 0; i < PARTICLE_POOL_SIZE; i++) {
     const p = particles[i];
+    if (!p.active) continue;
     p.life -= dt;
-    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    if (p.life <= 0) { p.active = false; if (particleActive > 0) particleActive--; continue; }
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     p.z += p.vz * dt;
@@ -6038,10 +6467,13 @@ function bomberExplode(e) {
 
 // 投射物更新
 function updateProjectiles(dt) {
-  for (let i = projectiles.length - 1; i >= 0; i--) {
+  // v2.5：遍歷預配置池，命中/壽命盡 → active=false（不 splice、不配置）
+  const deact = (pr) => { pr.active = false; if (projActive > 0) projActive--; };
+  for (let i = 0; i < PROJ_POOL_SIZE; i++) {
     const pr = projectiles[i];
+    if (!pr.active) continue;
     pr.life -= dt;
-    if (pr.life <= 0) { projectiles.splice(i, 1); continue; }
+    if (pr.life <= 0) { deact(pr); continue; }
     pr.x += Math.cos(pr.dir) * pr.speed * dt;
     pr.y += Math.sin(pr.dir) * pr.speed * dt;
     // 尾跡粒子（節流：每 0.05 秒一顆）
@@ -6053,7 +6485,7 @@ function updateProjectiles(dt) {
     // 撞牆消失
     if (isBlocking(mapAt(Math.floor(pr.x), Math.floor(pr.y)))) {
       spawnParticle(pr.x, pr.y, 0.5, 0, 0, 1, 0.3, pr.color, 2);
-      projectiles.splice(i, 1);
+      deact(pr);
       continue;
     }
     // 命中玩家
@@ -6061,7 +6493,7 @@ function updateProjectiles(dt) {
       const dx = player.x - pr.x, dy = player.y - pr.y;
       if (dx*dx + dy*dy < 0.3*0.3) {
         damagePlayer(pr.damage, '遠程射手的能量彈');
-        projectiles.splice(i, 1);
+        deact(pr);
         continue;
       }
     }
@@ -6076,7 +6508,7 @@ function updateProjectiles(dt) {
           spawnParticle(e.x, e.y, 0.5, 0, 0, 1, 0.3, pr.color, 2);
           if (e.hp <= 0) killEnemy(e);
           else playEnemyHurt(panForEnemy(e));
-          projectiles.splice(i, 1);
+          deact(pr);
           break;
         }
       }
@@ -6094,7 +6526,7 @@ function killEnemy(e) {
   unlockAchievement('first_kill');
   if (stats.totalKills >= 20) unlockAchievement('kills_20');
   // XP 獎勵
-  const xpMap = { patrol: 10, chaser: 15, shooter: 20, tank: 30, swarm: 5, splitter: 20, bomber: 20, sentinel: 25, boss: 200 };
+  const xpMap = { patrol: 10, chaser: 15, shooter: 20, tank: 30, swarm: 5, splitter: 20, bomber: 20, sentinel: 25, lurker: 25, healer: 30, boss: 200 };
   gainXP(xpMap[e.type] || 10);
   // 炸彈兵被擊殺時也會爆炸（範圍傷害玩家）
   if (e.type === 'bomber') bomberExplode(e);
@@ -6112,6 +6544,16 @@ function killEnemy(e) {
   // 類型成就
   if (e.type === 'shooter') unlockAchievement('shooter_killer');
   if (e.type === 'tank') unlockAchievement('tank_breaker');
+  // v2.5：累計擊殺 Lurker（跨局累計，存 stats）
+  if (e.type === 'lurker') {
+    stats.lurkerKills = (stats.lurkerKills || 0) + 1;
+    if (stats.lurkerKills >= 5) unlockAchievement('lurker_hunter');
+  }
+  // v2.5：治療術士被殺 → 全團沉默 5 秒
+  if (e.type === 'healer') {
+    silenceT = 5;
+    if (!autoPlay) showToast('治療術士倒下！敵方全團沉默 5 秒！');
+  }
   if (e.type === 'boss') {
     unlockAchievement('boss_slayer');
     onBossDefeated(e);
@@ -6126,9 +6568,17 @@ function killEnemy(e) {
 
 // 敵人更新
 function updateEnemies(dt) {
+  // v2.4：炮彈瞄準層開啟期間（玩家退出 pointer lock 用滑鼠點地圖）暫停敵人更新，
+  // 避免玩家毫無防備被圍毆
+  if (cannonAiming) return;
+  // v2.5：全團沉默倒數（治療術士被殺後觸發；期間敵人不施放特殊技能：射擊/召喚/彈幕/治療）
+  if (silenceT > 0) silenceT -= dt;
   // 夜晚增益：敵速 ×1.25、偵測距離 8→11、射手射速加快（冷卻 ×0.7）
   const isNight = (dayPhaseName === '夜晚');
-  const nightMult = isNight ? 1.25 : 1.0;
+  // v2.5：血月事件期間敵方移動速度再 ×1.3（nightMult 同時作為「夜晚+血月」速度乘數；
+  //  偵測距離 seeRange 與射速 shootCdMult 另依 isNight 計算，不受血月影響）
+  const bloodMoonMult = (typeof bloodMoonActive !== 'undefined' && bloodMoonActive) ? 1.3 : 1.0;
+  const nightMult = (isNight ? 1.25 : 1.0) * bloodMoonMult;
   // 蹲下潛行：偵測距離 ×0.4
   const crouchMult = (typeof crouching !== 'undefined' && crouching) ? 0.4 : 1.0;
   const seeRange = (isNight ? 11 : 8) * crouchMult;
@@ -6166,7 +6616,7 @@ function updateEnemies(dt) {
       // 階段2/3 定期召喚 swarm
       if (ratio < 0.66) {
         e.summonT -= dt;
-        if (e.summonT <= 0) {
+        if (e.summonT <= 0 && silenceT <= 0) {
           e.summonT = berserk ? 4 : 8; // 狂暴時召喚間隔減半
           for (let s = 0; s < 2; s++) {
             const ang = Math.random() * Math.PI * 2;
@@ -6180,15 +6630,15 @@ function updateEnemies(dt) {
         }
         // 階段2 扇形彈幕：每 6 秒朝玩家發射 5 發扇形能量彈（角度間距 0.25 rad）
         e.fanT = (e.fanT === undefined ? 4 : e.fanT) - dt;
-        if (e.fanT <= 0) {
+        if (e.fanT <= 0 && silenceT <= 0) {
           e.fanT = 6;
           const baseAng = Math.atan2(dy, dx);
           for (let f = -2; f <= 2; f++) {
-            projectiles.push({
-              x: e.x, y: e.y, dir: baseAng + f * 0.25,
-              speed: 4.0, damage: 18, color: [255, 90, 60],
-              life: 3.5, fromPlayer: false, trailT: 0,
-            });
+            spawnProjectile(
+              e.x, e.y, baseAng + f * 0.25,
+              4.0, 18, [255, 90, 60],
+              3.5, false
+            );
           }
         }
       }
@@ -6262,6 +6712,84 @@ function updateEnemies(dt) {
       continue;
     }
 
+    // === v2.5：潛伏者 lurker ===
+    // 平時幾乎隱形、緩慢巡邏；玩家距離 <2.5 格才「現身」並加速衝刺追擊；
+    // 拉開到 >4.0 格後重新沉入隱形。無視線要求（潛伏者靠本體距離感測，
+    // 否則會躲在暗處永遠無法反制——小地圖仍固定顯示其位置）。
+    if (e.type === 'lurker') {
+      const REVEAL_DIST = 2.5, UNREVEAL_DIST = 4.0;
+      if (!e.revealed && distToPlayer < REVEAL_DIST) e.revealed = true;
+      else if (e.revealed && distToPlayer > UNREVEAL_DIST) e.revealed = false;
+      if (e.revealed) {
+        // 現身：高速衝刺直撲玩家
+        e.state = 'chase';
+        const ang = Math.atan2(dy, dx);
+        e.dir = ang;
+        const spd = e.speed * 1.9 * nightMult; // 衝刺加速
+        const lmvx = Math.cos(ang) * spd * dt;
+        const lmvy = Math.sin(ang) * spd * dt;
+        if (enemyCanMove(e.x + lmvx, e.y)) e.x += lmvx;
+        if (enemyCanMove(e.x, e.y + lmvy)) e.y += lmvy;
+      } else {
+        // 隱形巡邏：極緩慢漂移，定時隨機換向
+        e.state = 'patrol';
+        e.patrolT -= dt;
+        if (e.patrolT <= 0) { e.dir = Math.random() * Math.PI * 2; e.patrolT = 2.0 + Math.random() * 2.0; }
+        const spd = e.speed * 0.35 * nightMult;
+        const lmvx = Math.cos(e.dir) * spd * dt;
+        const lmvy = Math.sin(e.dir) * spd * dt;
+        if (enemyCanMove(e.x + lmvx, e.y)) e.x += lmvx;
+        else e.patrolT = 0;
+        if (enemyCanMove(e.x, e.y + lmvy)) e.y += lmvy;
+        else e.patrolT = 0;
+      }
+      // 接觸傷害
+      const lTouch = Math.hypot(player.x - e.x, player.y - e.y);
+      if (lTouch < 0.55 && e.attackCd <= 0) {
+        e.attackCd = 1.0;
+        damagePlayer(e.touchDmg, enemyDeathName(e));
+      }
+      continue;
+    }
+
+    // === v2.5：治療術士 healer ===
+    // 不主動攻擊，固定站位；每 3 秒為半徑 4 內「最弱」友軍回 20 HP（綠色治療投射物視覺）。
+    // 被打死後全團沉默 5 秒（silenceT 由 killEnemy 設定，期間含治療在內的特殊技能全數停用）。
+    if (e.type === 'healer') {
+      e.state = 'idle';
+      e.healT -= dt;
+      if (e.healT <= 0 && silenceT <= 0) {
+        // 找半徑 4 內 HP 比例最低的友軍（不含自己、不含已死、不含滿血）
+        let target = null, worstRatio = 1.0;
+        for (const o of enemies) {
+          if (o === e || o.state === 'dead') continue;
+          if (Math.hypot(o.x - e.x, o.y - e.y) > 4) continue;
+          const ratio = o.hp / o.maxHp;
+          if (ratio < worstRatio) { worstRatio = ratio; target = o; }
+        }
+        if (target && worstRatio < 1.0) {
+          e.healT = 3;
+          target.hp = Math.min(target.maxHp, target.hp + 20);
+          // 綠色治療粒子流（從術士飄向目標）
+          for (let k = 0; k < 10; k++) {
+            const t = k / 10;
+            spawnParticle(e.x + (target.x - e.x) * t, e.y + (target.y - e.y) * t,
+              0.4, (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.6,
+              (Math.random() - 0.5) * 0.5, 0.4, [120, 255, 150], 2);
+          }
+        } else {
+          e.healT = 1; // 沒人可補，1 秒後再檢查
+        }
+      }
+      // 被摸到也會撞人（極弱）
+      const hTouch = Math.hypot(player.x - e.x, player.y - e.y);
+      if (hTouch < 0.5 && e.attackCd <= 0) {
+        e.attackCd = 1.0;
+        damagePlayer(e.touchDmg, '治療術士');
+      }
+      continue;
+    }
+
     // 偵測玩家：距離 < seeRange 且有視線（夜晚提升、蹲下壓低）
     const canSee = distToPlayer < seeRange && enemyHasLOS(e.x, e.y, player.x, player.y);
 
@@ -6282,13 +6810,13 @@ function updateEnemies(dt) {
         else if (distToPlayer > desired + 1) ang = ang;     // 靠近
         else ang = ang + Math.PI / 2;                       // 橫移
         e.shootT -= dt;
-        if (e.shootT <= 0 && distToPlayer < 9 && canSee) {
+        if (e.shootT <= 0 && distToPlayer < 9 && canSee && silenceT <= 0) {
           e.shootT = 2.2 * shootCdMult;
-          projectiles.push({
-            x: e.x, y: e.y, dir: Math.atan2(dy, dx),
-            speed: 5.0, damage: 15, color: [180, 80, 255],
-            life: 3.0, fromPlayer: false, trailT: 0,
-          });
+          spawnProjectile(
+            e.x, e.y, Math.atan2(dy, dx),
+            5.0, 15, [180, 80, 255],
+            3.0, false
+          );
         }
       }
       mvx = Math.cos(ang) * e.speed * nightMult * dt;
@@ -6333,6 +6861,8 @@ function enemyDeathName(e) {
     case 'bomber': return '炸彈兵';
     case 'sentinel': return '旋轉哨兵';
     case 'splitter': return '分裂體';
+    case 'lurker': return '潛伏者';
+    case 'healer': return '治療術士';
     case 'chaser':
     default: return '追蹤者';
   }
@@ -6355,6 +6885,8 @@ function playerAttack() {
   if (isFinisher) { comboTriggers++; setAchProgress('combo_master', comboTriggers); if (comboTriggers >= 10) unlockAchievement('combo_master'); }
   // 連擊 20 成就（只觸發一次）
   if (comboCount >= 20 && !combo20Fired) { combo20Fired = true; unlockAchievement('combo_20'); }
+  // v2.5：連擊 30 成就（combo_30）
+  if (comboCount >= 30) unlockAchievement('combo_30');
   // 連擊傷害倍率：×(1+0.05×comboCount)，上限 ×2
   const comboMult = Math.min(2, 1 + 0.05 * comboCount);
   // 準星擴散反饋
@@ -6484,11 +7016,11 @@ function playerShoot() {
   if (playerAmmo <= 0) { showToast('沒有能量彈！'); return; }
   playerAmmo--;
   shootCooldown = 0.35; // 約 0.35 秒射速
-  projectiles.push({
-    x: player.x, y: player.y, dir: player.dir,
-    speed: 9.0, damage: 30, color: [100, 200, 255],
-    life: 2.0, fromPlayer: true, trailT: 0,
-  });
+  spawnProjectile(
+    player.x, player.y, player.dir,
+    9.0, 30, [100, 200, 255],
+    2.0, true
+  );
   playSwing();
   updateAmmoHUD();
 }
@@ -6536,6 +7068,16 @@ function passableNeighbor(cx, cy, d) {
 
 // 統一尋路入口：回傳 { path:[{x,y}...], visited, ms }（未平滑）
 // algo: astar | bfs | dfs | greedy
+// v2.4：模組層預配置最大尺寸（無邊迷宮 89×89=7921 格）尋路緩衝。
+// 每次規劃前 fill() 重用，避免大迷宮每次重規劃重新配置數個 TypedArray 造成 GC 壓力。
+// 注意：findPathRaw 為單線程 rAF 呼叫、無遞入並發，可安全共享。
+const PF_MAX_CELLS = 89 * 89;
+const pfParentBuf = new Int32Array(PF_MAX_CELLS);
+const pfGScoreBuf = new Float32Array(PF_MAX_CELLS);
+const pfOpenFBuf = new Float32Array(PF_MAX_CELLS);
+const pfSeenBuf = new Uint8Array(PF_MAX_CELLS);
+const pfQueueBuf = new Int32Array(PF_MAX_CELLS); // BFS 指標式環形佇列
+
 function findPathRaw(startX, startY, endX, endY, algo) {
   const sx = Math.floor(startX), sy = Math.floor(startY);
   const ex = Math.floor(endX), ey = Math.floor(endY);
@@ -6547,7 +7089,9 @@ function findPathRaw(startX, startY, endX, endY, algo) {
   if (!walk(mapAt(ex, ey))) return { path: null, visited: 0, ms: 0 };
   if (startIdx === endIdx) return { path: [{x: ex, y: ey}], visited: 1, ms: 0 };
 
-  const parent = new Int32Array(size).fill(-1);
+  // parent：重用模組層緩衝，並只 fill 本次地圖大小範圍
+  const parent = pfParentBuf;
+  parent.fill(-1, 0, size);
   let visited = 0;
 
   function reconstruct() {
@@ -6559,9 +7103,10 @@ function findPathRaw(startX, startY, endX, endY, algo) {
   }
 
   if (algo === 'astar' || algo === 'greedy') {
-    const gScore = new Float32Array(size).fill(Infinity);
-    const closed = new Uint8Array(size);
-    const openF = new Float32Array(size);
+    // v2.4：重用模組層預配置緩衝，規劃前填值
+    const gScore = pfGScoreBuf; gScore.fill(Infinity, 0, size);
+    const closed = pfSeenBuf; closed.fill(0, 0, size);
+    const openF = pfOpenFBuf;
     const SQRT2 = Math.SQRT2;
     function h(x, y) {
       const dx = Math.abs(x - ex), dy = Math.abs(y - ey);
@@ -6621,11 +7166,14 @@ function findPathRaw(startX, startY, endX, endY, algo) {
 
   if (algo === 'bfs') {
     // 4 方向廣度優先（保證最短路徑格數）
-    const seen = new Uint8Array(size);
-    const queue = [startIdx]; seen[startIdx] = 1;
+    // v2.4：改用模組層預配置 Int32Array + head/tail 指標，取代 Array.shift()（O(n)）
+    const seen = pfSeenBuf; seen.fill(0, 0, size);
+    const queue = pfQueueBuf;
+    let qHead = 0, qTail = 0;
+    queue[qTail++] = startIdx; seen[startIdx] = 1;
     const d4 = [[0,-1],[0,1],[-1,0],[1,0]];
-    while (queue.length) {
-      const cur = queue.shift(); visited++;
+    while (qHead < qTail) {
+      const cur = queue[qHead++]; visited++;
       if (cur === endIdx) return { path: reconstruct(), visited, ms: performance.now() - t0 };
       const cx = cur % W, cy = (cur / W) | 0;
       for (const [dx, dy] of d4) {
@@ -6633,7 +7181,7 @@ function findPathRaw(startX, startY, endX, endY, algo) {
         if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
         const nIdx = ny * W + nx;
         if (seen[nIdx] || !walk(MAP[ny][nx])) continue;
-        seen[nIdx] = 1; parent[nIdx] = cur; queue.push(nIdx);
+        seen[nIdx] = 1; parent[nIdx] = cur; queue[qTail++] = nIdx;
       }
     }
     return { path: null, visited, ms: performance.now() - t0 };
@@ -6641,7 +7189,7 @@ function findPathRaw(startX, startY, endX, endY, algo) {
 
   // dfs：深度優先（堆疊），路徑可能很長但最快找到
   {
-    const seen = new Uint8Array(size);
+    const seen = pfSeenBuf; seen.fill(0, 0, size);
     const stack = [startIdx]; seen[startIdx] = 1;
     while (stack.length) {
       const cur = stack.pop(); visited++;
@@ -6766,6 +7314,8 @@ function findNearestGem() {
 
 // 規劃下一段目標（最近寶石，否則終點），回傳是否成功
 // skipSmooth=true 時使用未平滑的格中心路徑（卡住重試用，保證碰撞安全）
+// v2.4：規劃 toast 限流（同樣訊息 10 秒內最多一次），避免大迷宮重規劃時連續跳 toast
+let lastPlanToastT = 0;
 function planNextAutoTarget(skipSmooth) {
   pfAutoDoors = true; // 自動遊玩：鎖門可自動打開，尋路時視為可行走
   try {
@@ -6792,8 +7342,14 @@ function planNextAutoTarget(skipSmooth) {
       raw = findPathRaw(player.x, player.y, END.x, END.y, pathfindAlgo);
     }
     const planMs = performance.now() - t0;
-    // 大地圖首次尋路較慢時給予視覺回饋
-    if (planMs > 50) showToast(`規劃路徑中... ${planMs.toFixed(0)}ms`);
+    // 大地圖首次尋路較慢時給予視覺回饋；v2.4：限流 10 秒一次避免洗版
+    if (planMs > 50) {
+      const nowT = performance.now();
+      if (nowT - lastPlanToastT > 10000) {
+        lastPlanToastT = nowT;
+        showToast(`規劃路徑中... ${planMs.toFixed(0)}ms`);
+      }
+    }
     if (!raw || !raw.path || raw.path.length < 2) return false;
     const path = skipSmooth ? raw.path : smoothPath(raw.path);
     autoPath = path;
@@ -6942,7 +7498,7 @@ function updateAutoPlay(dt) {
     if (fwdCount >= 2) useGrenadeItem();
   }
   // 炮彈：立即瞄向最需要清理的地方（敵群最密集處）
-  cannonCd -= dt;
+  // v2.4：cannonCd 統一由 update() 每幀遞減，此處不再重複扣 dt（雙扣會讓冷卻變成一半）
   if (itemInv.cannon > 0 && cannonCd <= 0) {
     let best = null, bestN = 1;
     for (const e of enemies) {
@@ -7130,13 +7686,16 @@ function updateAutoPlay(dt) {
     const moveDist = autoMoveSpeed * dt * speedFactor;
     const mx = Math.cos(player.dir) * moveDist;
     const my = Math.sin(player.dir) * moveDist;
-    if (canMove(player.x + mx, player.y)) player.x += mx;
-    if (canMove(player.x, player.y + my)) player.y += my;
+    // v2.5：自動遊玩同樣套用冰面滑行物理（卡住偵測容忍滑行期的連續位移）
+    movePlayerWithSlide(mx, my, dt);
   }
 }
 
 function update(dt) {
   if (gameWon || playerDead) return;
+
+  // v2.4：分步教學狀態機推進（不阻擋遊戲操作）
+  if (typeof updateStepTutorial === 'function') updateStepTutorial();
 
   // === 敵人更新（兩種模式都運作） ===
   updateEnemies(dt);
@@ -7182,8 +7741,10 @@ function update(dt) {
   }
   // 投射物更新
   updateProjectiles(dt);
-  // 日夜循環推進
-  if (settings.dayNightCycle && !gameWon) {
+  // v2.5：血月事件推進（觸發/倒數/結束）；期間暫停晝夜推進
+  updateBloodMoon(dt);
+  // 日夜循環推進（血月期間暫停推進，但仍依當前 dayTime 渲染光線）
+  if (settings.dayNightCycle && !gameWon && !bloodMoonActive) {
     dayTime = (dayTime + dt / DAY_LENGTH) % 1;
     updateDayNight();
     // 時段切換提示
@@ -7204,8 +7765,9 @@ function update(dt) {
   }
 
   // === 視覺反饋 ===
-  document.getElementById('damage-vignette').classList.toggle('flash', (settings.screenEffects !== false) && damageFlash > 0);
-  document.getElementById('attack-swing').style.opacity = attackAnim > 0 ? (attackAnim / 0.2) * 0.7 : 0;
+  // v2.4：使用上方快取的 DOM 參照，取代每幀 getElementById
+  dmgVigEl.classList.toggle('flash', (settings.screenEffects !== false) && damageFlash > 0);
+  attackSwingEl.style.opacity = attackAnim > 0 ? (attackAnim / 0.2) * 0.7 : 0;
 
   // 傳送點觸發（兩種模式皆適用）
   checkTeleporters(dt);
@@ -7222,6 +7784,7 @@ function update(dt) {
       updateAutoPlay(dt);
       // 自動遊玩收集（無敵，不踩陷阱傷害）
       checkGemCollect();
+      updateCrumbleTiles(dt); // v2.5：崩落地板同樣推進（碎裂觸發安全撤離+重算路徑）
       checkKeys();
       checkItems();
       checkDoors();
@@ -7292,8 +7855,8 @@ function update(dt) {
   }
 
   const oldX = player.x, oldY = player.y;
-  if (canMove(player.x + dx, player.y)) player.x += dx;
-  if (canMove(player.x, player.y + dy)) player.y += dy;
+  // v2.5：移動經過滑行物理函數（冰面 tile 7 套用低摩擦慣性，一般地面行為不變）
+  movePlayerWithSlide(dx, dy, dt);
   const movedDist = Math.sqrt((player.x - oldX) ** 2 + (player.y - oldY) ** 2);
   stepAccum += movedDist;
 
@@ -7319,6 +7882,7 @@ function update(dt) {
   // 各類收集與互動判定
   checkGemCollect();
   checkTrap();
+  updateCrumbleTiles(dt); // v2.5：崩落地板倒數推進
   checkKeys();
   checkDoors();
   checkItems();
@@ -7380,6 +7944,79 @@ function checkTrap() {
   }
 }
 
+// ============================================================
+//  v2.5：崩落地板（tile 8）倒數推進
+//  玩家踏上開始 1.2 秒倒數，碎裂前 0.3 秒閃紅警示，碎裂後變牆(tile 1)；
+//  碎裂瞬間若玩家仍站上面，安全傳送到最近可行走格（優先身後一格）避免死當。
+// ============================================================
+function updateCrumbleTiles(dt) {
+  // 1) 偵測玩家踏上崩落格 → 開始倒數
+  const pcx = Math.floor(player.x), pcy = Math.floor(player.y);
+  const pKey = pcy * MAP_W + pcx;
+  if (mapAt(pcx, pcy) === TILE_CRUMBLE && !crumbleTimers.has(pKey)) {
+    crumbleTimers.set(pKey, CRUMBLE_FUSE);
+  }
+  // 2) 推進倒數
+  for (const [key, remain] of crumbleTimers) {
+    const newRemain = remain - dt;
+    const x = key % MAP_W, y = Math.floor(key / MAP_W);
+    // 已碎裂成牆（格被外力改變）→ 清掉紀錄
+    if (mapAt(x, y) !== TILE_CRUMBLE) { crumbleTimers.delete(key); crumbleWarnSet.delete(key); continue; }
+    if (newRemain <= CRUMBLE_WARN) crumbleWarnSet.add(key);
+    if (newRemain <= 0) {
+      // 碎裂：變成磚牆
+      MAP[y][x] = 1;
+      currentMapVersion++;
+      crumbleTimers.delete(key);
+      crumbleWarnSet.delete(key);
+      pendingReplann = true; // 地形改變：要求自動遊玩重算
+      // 碎裂灰塵粒子
+      spawnParticle(x + 0.5, y + 0.5, 0.3, 0, 0, 1.5, 0.5, [150, 130, 110], 3);
+      // 玩家仍站在該格 → 安全傳送到最近可行走格（避免死當）
+      const px = Math.floor(player.x), py = Math.floor(player.y);
+      if (px === x && py === y) {
+        evacuateFromCrumble(x, y);
+      }
+    } else {
+      crumbleTimers.set(key, newRemain);
+    }
+  }
+}
+
+// 從已碎裂格安全撤離：優先身後一格，否則向外搜尋最近可行走格
+function evacuateFromCrumble(cx, cy) {
+  // 候選：身後（移動反方向）、上下左右、對角，依可行性第一個放置
+  const behindX = cx - Math.round(Math.cos(player.dir));
+  const behindY = cy - Math.round(Math.sin(player.dir));
+  const cands = [[behindX, behindY], [cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1],
+                 [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1], [cx + 1, cy + 1]];
+  for (const [nx, ny] of cands) {
+    if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue;
+    if (isWalkable(mapAt(nx, ny))) {
+      player.x = nx + 0.5; player.y = ny + 0.5;
+      spawnParticle(player.x, player.y, 0.5, 0, 0, 1, 0.4, [180, 200, 220], 2.5);
+      // v2.5：記錄一次成功安全撤離（crumble_survivor 成就：3 次解鎖）
+      crumbleEvacCount++;
+      if (crumbleEvacCount >= 3) unlockAchievement('crumble_survivor');
+      if (!autoPlay) showToast('地板碎裂！已緊急撤離');
+      return;
+    }
+  }
+  // 極罕見：四周全是牆，向外擴大搜尋（保險起見避免死當）
+  for (let r = 2; r <= 4; r++) {
+    for (let ox = -r; ox <= r; ox++) {
+      for (let oy = -r; oy <= r; oy++) {
+        const nx = cx + ox, ny = cy + oy;
+        if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue;
+        if (isWalkable(mapAt(nx, ny))) {
+          player.x = nx + 0.5; player.y = ny + 0.5;
+          return;
+        }
+      }
+    }
+  }
+}
+
 // 鑰匙拾取
 function checkKeys() {
   for (const k of keyItems) {
@@ -7412,6 +8049,7 @@ function checkDoors() {
           if (!autoPlay) keyCount--;
           MAP[ny][nx] = 0;
           currentMapVersion++;
+          doorJustOpened = true; // v2.4：分步教學步驟 4（開門）偵測旗標
           pendingReplann = true; // 地形改變：要求自動遊玩重算
           playDoorOpen();
           if (!autoPlay) { showToast('門已開啟'); updateKeyHUD(); }
@@ -7477,6 +8115,7 @@ function updateItemBar() {
 function useShieldItem() {
   if (itemInv.shield <= 0) return;
   itemInv.shield--;
+  runUsedItems.add('shield');
   shieldImmuneT = 5;
   updateItemBar();
   updateBuffsHUD();
@@ -7489,17 +8128,20 @@ function useShieldItem() {
 function useGrenadeItem() {
   if (itemInv.grenade <= 0) return;
   itemInv.grenade--;
+  runUsedItems.add('grenade');
   updateItemBar();
   const bx = player.x + Math.cos(player.dir) * 2.5;
   const by = player.y + Math.sin(player.dir) * 2.5;
   boomAt(bx, by, 3.5, 120, [255, 140, 40]);
   playItemPickup('grenade');
-  showToast('手雷引爆！');
+  // v2.4：自動遊玩 AI 每丟一顆手雷就跳 toast 會洗版，加 autoPlay 守衛
+  if (!autoPlay) showToast('手雷引爆！');
 }
 
 // 炮彈：開啟地圖瞄準
 function useCannonItem() {
   if (itemInv.cannon <= 0) return;
+  runUsedItems.add('cannon');
   cannonAiming = true;
   // 退出 pointer lock，讓玩家能用滑鼠點選地圖
   if (document.pointerLockElement) document.exitPointerLock();
@@ -7587,15 +8229,17 @@ function boomAt(x, y, radius, damage, color) {
       Math.cos(ang) * spd, Math.sin(ang) * spd, (Math.random() - 0.4) * 1.6,
       0.4 + Math.random() * 0.4, color, 3 + Math.random() * 2.5);
   }
+  let kills = 0; // v2.5：回傳本次爆炸擊殺數（供 cannon_triple 成就判定）
   for (const e of enemies) {
     if (e.state === 'dead') continue;
     if (Math.hypot(e.x - x, e.y - y) <= radius) {
       e.hp -= damage;
       e.hitFlash = 0.2;
-      if (e.hp <= 0) killEnemy(e);
+      if (e.hp <= 0) { killEnemy(e); kills++; }
     }
   }
   playItemPickup('grenade');
+  return kills;
 }
 
 // 更新炮彈落點倒數與爆炸
@@ -7607,7 +8251,9 @@ function updateCannonTargets(dt) {
     if (Math.random() < 0.4) spawnParticle(ct.x, ct.y, 0.2, 0, 0, 0.5, 0.5, [255, 120, 40], 3);
     if (ct.t <= 0) {
       cannonTargets.splice(i, 1);
-      boomAt(ct.x, ct.y, 6, 200, [255, 80, 30]);
+      const boomKills = boomAt(ct.x, ct.y, 6, 200, [255, 80, 30]);
+      // v2.5：單次炮彈爆炸擊殺 ≥3 隻敵人 → cannon_triple 成就
+      if (boomKills >= 3) unlockAchievement('cannon_triple');
     }
   }
 }
@@ -7663,7 +8309,7 @@ function checkItems() {
       it.collected = true;
       applyItem(it.type);
       playItemPickup(it.type);
-      const colMap = { health: [255,80,80], speed: [80,160,255], shield: [200,220,255], star: [255,220,80], crystal: [80,200,255], xpgem: [255,215,60], maxup: [255,60,120] };
+      const colMap = { health: [255,80,80], speed: [80,160,255], shield: [200,220,255], star: [255,220,80], crystal: [80,200,255], xpgem: [255,215,60], maxup: [255,60,120], reveal: [200,120,255], grenade: [255,140,40], cannon: [255,70,70], scroll: [220,200,255], charm: [120,255,180] };
       spawnParticle(it.x, it.y, 0.5, 0, 0, 1.2, 0.5, colMap[it.type] || [255,255,255], 2);
       runItemTypes.add(it.type);
       stats.totalItemsPicked++;
@@ -7715,8 +8361,45 @@ function applyItem(type) {
   } else if (type === 'reveal') {
     revealTimer = 10;   // 小地圖短暫揭露所有敵人
     showToast('地圖卷軸：敵人位置顯示 10 秒！');
+  } else if (type === 'scroll') {
+    // v2.5：閃電卷軸——拾取即施放，半徑 5 格內所有敵人 80 傷害＋0.5 秒硬直
+    castLightning();
+    runUsedItems.add('scroll');
+  } else if (type === 'charm') {
+    // v2.5：護符——裝備於身，下次受傷時自動消耗並無敵 2 秒
+    buffs.charm = true;
+    showToast('獲得護符！下次受傷將自動抵擋並無敵 2 秒');
   }
   updateBuffsHUD();
+}
+
+// v2.5：閃電卷軸——白紫色電擊鏈，對半徑 5 內所有敵人造成 80 傷害＋0.5 秒硬直
+function castLightning() {
+  const R = 5, DMG = 80, STUN = 0.5;
+  // 視覺：玩家位置放射狀白紫電光粒子
+  for (let i = 0; i < 40; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const dist = Math.random() * R;
+    spawnParticle(player.x + Math.cos(ang) * dist, player.y + Math.sin(ang) * dist,
+      0.25 + Math.random() * 0.3, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2,
+      (Math.random() - 0.3) * 2.5, 0.35, [220, 200, 255], 2 + Math.random() * 1.5);
+  }
+  for (const e of enemies) {
+    if (e.state === 'dead') continue;
+    if (Math.hypot(e.x - player.x, e.y - player.y) <= R) {
+      e.hp -= DMG;
+      e.hitFlash = 0.3;
+      e.stunT = Math.max(e.stunT || 0, STUN);
+      // 電擊命中閃電粒子
+      for (let k = 0; k < 8; k++) {
+        spawnParticle(e.x, e.y, 0.3, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3,
+          (Math.random() - 0.3) * 2, 0.3, [230, 210, 255], 1.5);
+      }
+      if (e.hp <= 0) killEnemy(e);
+    }
+  }
+  playItemPickup('scroll');
+  showToast('閃電卷軸！半徑 5 格內敵人麻痺！');
 }
 
 // --- FPS ---
@@ -7815,6 +8498,11 @@ function updatePostFX() {
     const beat = 0.5 + Math.sin(frameNow * 0.012) * 0.5;
     const a = (0.3 - hpPct) / 0.3 * (0.25 + beat * 0.25);
     bg = `radial-gradient(ellipse at center, rgba(255,0,0,0) 55%, rgba(200,0,0,${a}) 100%)`;
+  }
+  // v2.5：血月事件——全畫面紅色偏色疊層（置於最上層，不影響受傷/低血效果）
+  if (bloodMoonActive) {
+    const redLayer = `radial-gradient(ellipse at center, rgba(150,15,15,0.16) 0%, rgba(100,0,0,0.30) 100%)`;
+    bg = redLayer + ', ' + bg;
   }
   el.style.background = bg;
   el.style.opacity = 1;
@@ -7980,6 +8668,7 @@ startBtn.addEventListener('click', () => {
     applyWeather();
     hideLoading();
     maybeShowTutorial();
+    startStepTutorial(); // v2.4：首次進入遊戲啟動分步教學（已完成或已略過則不顯示）
     if (!isMobile) safeRequestPointerLock();
   });
 });
@@ -8108,12 +8797,25 @@ function showWinScreen() {
     if (!runDamaged) unlockAchievement('no_death_win');  if (gameElapsed < 60) unlockAchievement('speed_win');
     if (gemsTotal > 0 && gemsCollected >= gemsTotal) unlockAchievement('all_gems');
     if (runKills >= 5) unlockAchievement('kill_5');
-    if (runKills === 0) unlockAchievement('pacifist');
+    // v2.4：無怪模式（monsterMode==='none'）根本不會生成敵人，runKills 永遠為 0，
+    // 不再視為「和平主義」成就，避免無怪模式洗成就
+    if (runKills === 0 && settings.monsterMode === 'on') unlockAchievement('pacifist');
     if (runItemTypes.size >= 4) unlockAchievement('all_items');
     if (wonByAuto || autoPlay) unlockAchievement('autoplay_win');
     if (!useRandomMaze) unlockAchievement('custom_win');
     // 夜晚通關成就
     if (settings.dayNightCycle && dayPhaseName === '夜晚') unlockAchievement('night_survivor');
+    // v2.5：本輪新通關成就
+    if (bloodMoonEverOn) unlockAchievement('blood_moon_survivor'); // 血月期間存活並通關
+    if (dayPhaseName === '夜晚') unlockAchievement('overnight_win'); // 夜晚時段通關
+    if (runUsedItems.size >= 3) unlockAchievement('item_hopper');    // 單局用過 3 種戰鬥道具
+    // 零傷連勝（no_hit_3）：無傷則連勝累計、受傷則歸零
+    if (!runDamaged) {
+      stats.noHitWinStreak = (stats.noHitWinStreak || 0) + 1;
+      if (stats.noHitWinStreak >= 3) unlockAchievement('no_hit_3');
+    } else {
+      stats.noHitWinStreak = 0;
+    }
     // 跨區成就：未使用火把通關 / 雨天通關（unlockAchievement 對未定義 id 有防護）
     if (!runTorchUsed) unlockAchievement('torch_off_win');
     if (settings.weather === 'rain') unlockAchievement('rain_win');
@@ -8199,6 +8901,8 @@ function resetGameState() {
   damageFlash = 0;
   buffs.speed = 0;
   buffs.invincible = 0;
+  buffs.charm = false; // v2.5：護符每局重置
+  silenceT = 0;        // v2.5：全團沉默每局重置
   checkDoors._toastCd = 0;
   // 跨局狀態清理：蹲下指示燈 / 揭露計時器 / 自動遊玩旗標 / 射擊冷卻 / 戰鬥鎖
   crouching = false;
@@ -8219,7 +8923,7 @@ function resetGameState() {
   diffAdj = (typeof computeDifficultyAdjust === 'function') ? computeDifficultyAdjust() : { hpMult: 1, countMult: 1 };
   dashState.cd = 0; dashState.active = 0; dashState.used = 0; dashState.trailT = 0;
   comboCount = 0; comboTimer = 0; comboTriggers = 0;
-  projectiles.length = 0;
+  clearProjectiles(); // v2.5：投射物池清空（取代舊 projectiles.length = 0）
   playerAmmo = 0;
   bossRef = null; bossSummonCd = 0;
   bossWarnPending = false; bossWarnTimer = 0;
@@ -8243,7 +8947,14 @@ function resetGameState() {
   teleporterCooldown = 0;
   // 僅隨機模式才清空傳送點；自訂地圖已由 spawnCustomEntityActors() 塞入成對傳送點，不可清空
   if (!useCustom) teleporters = [];
-  particles.length = 0;
+  // v2.5：粒子物件池重置（const particles 已改為預配置固定陣列，不可用 length=0 清空）
+  for (const p of particles) p.active = false;
+  particleCursor = 0; particleActive = 0;
+  // v2.5：重置崩落地板倒數、冰面滑行慣性、血月事件狀態
+  crumbleTimers.clear();
+  crumbleWarnSet.clear();
+  slideVX = 0; slideVY = 0;
+  bloodMoonActive = false; bloodMoonT = 0; bloodMoonRollCd = 0;
   bobPhase = 0; bobOffset = 0;
   shakeTime = 0;
   stepTimer = 0;
@@ -8259,6 +8970,10 @@ function resetGameState() {
   // 重置每局成就追蹤
   runKills = 0;
   runItemTypes = new Set();
+  runUsedItems = new Set(); // v2.5：本局使用過的戰鬥道具
+  iceSlideDist = 0;         // v2.5：冰面滑行距離
+  bloodMoonEverOn = false;  // v2.5：本局血月是否觸發過
+  crumbleEvacCount = 0;     // v2.5：本局崩落地板撤離次數
   stepAccum = 0;
   runDamaged = false;
   wonByAuto = false;
@@ -8338,6 +9053,38 @@ enemyBtns.forEach(btn => {
 // 同步敵人密度按鈕狀態
 enemyBtns.forEach(b => b.classList.toggle('active', b.dataset.enemy === settings.enemyDensity));
 
+// v2.4：迷宮進階生成選項（環路率 / 走廊密度 / 鏡射對稱）
+function syncMazeAdvancedUI() {
+  document.querySelectorAll('.size-btn[data-loop]').forEach(b => {
+    b.classList.toggle('active', parseFloat(b.dataset.loop) === (settings.mazeLoopRate || 0.03));
+  });
+  document.querySelectorAll('.size-btn[data-branch]').forEach(b => {
+    b.classList.toggle('active', b.dataset.branch === (settings.mazeBranching || 'corridor'));
+  });
+  document.querySelectorAll('.size-btn[data-sym]').forEach(b => {
+    b.classList.toggle('active', b.dataset.sym === (settings.mazeSymmetry ? 'on' : 'off'));
+  });
+}
+document.querySelectorAll('.size-btn[data-loop]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    settings.mazeLoopRate = parseFloat(btn.dataset.loop);
+    saveSettings(); syncMazeAdvancedUI(); initAudio();
+  });
+});
+document.querySelectorAll('.size-btn[data-branch]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    settings.mazeBranching = btn.dataset.branch;
+    saveSettings(); syncMazeAdvancedUI(); initAudio();
+  });
+});
+document.querySelectorAll('.size-btn[data-sym]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    settings.mazeSymmetry = (btn.dataset.sym === 'on');
+    saveSettings(); syncMazeAdvancedUI(); initAudio();
+  });
+});
+syncMazeAdvancedUI();
+
 // ============================================================
 //  暫停選單 / 設定 / 返回主選單
 // ============================================================
@@ -8396,6 +9143,8 @@ function returnToMainMenu() {
   startScreen.style.display = 'flex';
   startStartBg(); // 返回主選單：恢復動態背景
   if (document.pointerLockElement) document.exitPointerLock();
+  // v2.4：返回主選單關閉環境雨聲（雨聲是局內環境音，主選單不應持續播放）
+  if (typeof stopRainSound === 'function') stopRainSound();
 }
 
 resumeBtn.addEventListener('click', resumeGame);
@@ -8426,12 +9175,22 @@ function syncSettingsUI() {
   setFovVal.textContent = settings.fovDeg + '°';
   setQuality.value = settings.renderQuality;
   setSound.value = settings.soundOn ? 'on' : 'off';
+  // v2.4：三條音量滑桿同步
+  const mv = document.getElementById('set-musicvol');
+  const sv = document.getElementById('set-sfxvol');
+  const ev = document.getElementById('set-envvol');
+  if (mv) { mv.value = settings.musicVol; document.getElementById('set-musicvol-val').textContent = Math.round(settings.musicVol * 100) + '%'; }
+  if (sv) { sv.value = settings.sfxVol;   document.getElementById('set-sfxvol-val').textContent   = Math.round(settings.sfxVol * 100)   + '%'; }
+  if (ev) { ev.value = settings.envVol;  document.getElementById('set-envvol-val').textContent  = Math.round(settings.envVol * 100)  + '%'; }
   setFontSize.value = settings.fontSize || 'medium';
-  setColorblind.value = settings.colorblind ? 'on' : 'off';
+  setColorblind.value = settings.colorblind || 'off';
   setReduceMotion.value = settings.reduceMotion ? 'on' : 'off';
   setHighContrast.value = settings.highContrast ? 'on' : 'off';
   document.getElementById('set-fps').value = settings.showFps ? 'on' : 'off';
   document.getElementById('set-daynight').value = settings.dayNightCycle ? 'on' : 'off';
+  // v2.5：血月事件開關同步
+  const bmSel = document.getElementById('set-bloodmoon');
+  if (bmSel) bmSel.value = (settings.bloodMoon !== false) ? 'on' : 'off';
   document.getElementById('set-autoquality').value = settings.autoQuality ? 'on' : 'off';
   document.getElementById('set-learning').value = settings.learningMode ? 'on' : 'off';
   document.getElementById('set-toastduration').value = String(settings.toastDuration || 1500);
@@ -8444,6 +9203,16 @@ function syncSettingsUI() {
 // 新設定事件
 document.getElementById('set-daynight').addEventListener('change', (e) => {
   settings.dayNightCycle = (e.target.value === 'on'); saveSettings();
+});
+// v2.5：血月事件開關
+document.getElementById('set-bloodmoon').addEventListener('change', (e) => {
+  settings.bloodMoon = (e.target.value === 'on');
+  saveSettings();
+  // 若玩家關閉時事件正在進行，立刻中止本次血月
+  if (!settings.bloodMoon && bloodMoonActive) {
+    bloodMoonActive = false; bloodMoonT = 0;
+    showFloatText('血月退去', '#8c8');
+  }
 });
 document.getElementById('set-autoquality').addEventListener('change', (e) => {
   settings.autoQuality = (e.target.value === 'on'); saveSettings();
@@ -8478,6 +9247,22 @@ setSound.addEventListener('change', () => {
   applySoundVolume();
   playClick();
 });
+
+// v2.4：音效分軌三條音量滑桿事件
+function bindVolSlider(id, key, valId) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    settings[key] = parseFloat(el.value);
+    document.getElementById(valId).textContent = Math.round(settings[key] * 100) + '%';
+    saveSettings();
+    if (!audioCtx) initAudio();
+    applySoundVolume();
+  });
+}
+bindVolSlider('set-musicvol', 'musicVol', 'set-musicvol-val');
+bindVolSlider('set-sfxvol',   'sfxVol',   'set-sfxvol-val');
+bindVolSlider('set-envvol',   'envVol',   'set-envvol-val');
 settingsBtn.addEventListener('click', () => {
   syncSettingsUI();
   pausePanel.style.display = 'none';
@@ -8525,6 +9310,7 @@ const editor = {
   selStart: null,
   clipboard: null,       // 剪下/複製的區塊
   pasteAnchor: null,     // 貼上跟隨滑鼠的錨點
+  mapName: null,         // v2.5：目前編輯地圖名稱（JSON 下載檔名用）
 };
 
 // 歷史堆疊操作（快照 map + entities + 尺寸）
@@ -8649,7 +9435,8 @@ function sanitizeMapData(mapData) {
       if (!Array.isArray(mapData[y]) || mapData[y].length !== cols) return null;
       for (let x = 0; x < cols; x++) {
         const v = mapData[y][x];
-        if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 6) return null;
+        // v2.5：tile 上限由 6 放寬至 8（7=冰面、8=崩落地板）
+        if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 8) return null;
       }
     }
     return { rows, cols };
@@ -8686,6 +9473,7 @@ function saveCustomMap(mapData, start, end, entities) {
     stats.editorMapsSaved = (stats.editorMapsSaved || 0) + 1;
     saveStats();
     if (stats.editorMapsSaved >= 5) unlockAchievement('editor_5maps');
+    if (stats.editorMapsSaved >= 10) unlockAchievement('editor_10'); // v2.5：累計 10 張
     return true;
   } catch (e) {
     showToast('儲存失敗：瀏覽器儲存空間已滿');
@@ -8781,6 +9569,28 @@ function renderEditor() {
           const bx = px + (cs * b) / (barsCount + 1);
           editorCtx.fillRect(bx - Math.max(1, cs * 0.06), py + 1, Math.max(2, cs * 0.12), cs - 2);
         }
+      } else if (cell === TILE_ICE) {
+        // v2.5：冰面——冰藍色底 + 白色斜紋高光
+        editorCtx.fillStyle = '#9fd8ee';
+        editorCtx.fillRect(px, py, cs, cs);
+        editorCtx.strokeStyle = 'rgba(255,255,255,0.5)';
+        editorCtx.lineWidth = Math.max(1, cs * 0.08);
+        editorCtx.beginPath();
+        editorCtx.moveTo(px, py + cs); editorCtx.lineTo(px + cs, py);
+        editorCtx.stroke();
+      } else if (cell === TILE_CRUMBLE) {
+        // v2.5：崩落地板——灰褐底 + 裂痕
+        editorCtx.fillStyle = '#8a7a6a';
+        editorCtx.fillRect(px, py, cs, cs);
+        editorCtx.strokeStyle = 'rgba(40,30,20,0.7)';
+        editorCtx.lineWidth = Math.max(1, cs * 0.06);
+        editorCtx.beginPath();
+        editorCtx.moveTo(px + cs * 0.2, py + cs * 0.2);
+        editorCtx.lineTo(px + cs * 0.5, py + cs * 0.55);
+        editorCtx.lineTo(px + cs * 0.8, py + cs * 0.4);
+        editorCtx.moveTo(px + cs * 0.5, py + cs * 0.55);
+        editorCtx.lineTo(px + cs * 0.6, py + cs * 0.85);
+        editorCtx.stroke();
       } else {
         // 空地
         editorCtx.fillStyle = '#15151f';
@@ -8832,13 +9642,13 @@ function renderEditor() {
     const px = en.x * cs, py = en.y * cs;
     const cx = px + cs / 2, cy = py + cs / 2;
     if (en.type === 'enemy') {
-      const ec = { chaser:'#f44', shooter:'#f88', tank:'#a84', swarm:'#ee4', splitter:'#4e4', boss:'#f0f', bomber:'#fa4', sentinel:'#4af' };
+      const ec = { chaser:'#f44', shooter:'#f88', tank:'#a84', swarm:'#ee4', splitter:'#4e4', boss:'#f0f', bomber:'#fa4', sentinel:'#4af', lurker:'#8fb0b8' };
       editorCtx.fillStyle = ec[en.enemyType] || '#8c4';
       editorCtx.beginPath();
       editorCtx.arc(cx, cy, cs * 0.32, 0, Math.PI * 2);
       editorCtx.fill();
     } else if (en.type === 'item') {
-      const colors = { health:'#f55', speed:'#5af', shield:'#cdf', star:'#fd8', crystal:'#5cf', xpgem:'#fd6', maxup:'#f6a', reveal:'#8f8', random:'#fa0' };
+      const colors = { health:'#f55', speed:'#5af', shield:'#cdf', star:'#fd8', crystal:'#5cf', xpgem:'#fd6', maxup:'#f6a', reveal:'#8f8', random:'#fa0', scroll:'#dcf', charm:'#7fa' };
       editorCtx.fillStyle = colors[en.itemType] || '#fa0';
       editorCtx.fillRect(px + cs*0.25, py + cs*0.25, cs*0.5, cs*0.5);
     } else if (en.type === 'key') {
@@ -9003,6 +9813,15 @@ function applyTool(cell, erase) {
     editor.map[y][x] = TILE_BARS;
     return;
   }
+  // v2.5：冰面 / 崩落地板筆刷
+  if (editor.tool === 'ice') {
+    editor.map[y][x] = TILE_ICE;
+    return;
+  }
+  if (editor.tool === 'crumble') {
+    editor.map[y][x] = TILE_CRUMBLE;
+    return;
+  }
 
   // 牆/擦除：依筆刷大小/形狀以當前格為中心
   const half = Math.floor(editor.brushSize / 2);
@@ -9069,7 +9888,9 @@ function updatePropsPanel() {
       ${opt('splitter','分裂體')}
       ${opt('boss','首領')}
       ${opt('bomber','轟炸者')}
-      ${opt('sentinel','哨兵')}</select></div>`;
+      ${opt('sentinel','哨兵')}
+      ${opt('lurker','潛伏者')}
+      ${opt('healer','治療術士')}</select></div>`;
   } else if (en.type === 'item') {
     const opt = (val, label) => `<option value="${val}" ${en.itemType===val?'selected':''}>${label}</option>`;
     html += `<div>類型 <select id="prop-item">
@@ -9081,7 +9902,9 @@ function updatePropsPanel() {
       ${opt('crystal','能量彈')}
       ${opt('xpgem','經驗寶石')}
       ${opt('maxup','上限強化')}
-      ${opt('reveal','地圖卷軸')}</select></div>`;
+      ${opt('reveal','地圖卷軸')}
+      ${opt('scroll','閃電卷軸')}
+      ${opt('charm','護符')}</select></div>`;
   }
   if (en.type === 'tele') {
     const idx = editor.entities.indexOf(en);
@@ -9438,13 +10261,21 @@ document.getElementById('editor-random').addEventListener('click', () => generat
 
 // 筆刷大小選擇
 const brushBtns = document.querySelectorAll('.brush-btn');
+const brushSlider = document.getElementById('brush-size-slider');
+function setBrushSize(n) {
+  editor.brushSize = n;
+  brushBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.brush, 10) === n));
+  if (brushSlider) brushSlider.value = String(n);
+}
 brushBtns.forEach(btn => {
   btn.addEventListener('click', () => {
-    brushBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    editor.brushSize = parseInt(btn.dataset.brush, 10);
+    setBrushSize(parseInt(btn.dataset.brush, 10));
   });
 });
+// v2.5：筆刷大小滑桿 1-5（與按鈕雙向同步）
+if (brushSlider) {
+  brushSlider.addEventListener('input', () => setBrushSize(parseInt(brushSlider.value, 10)));
+}
 
 // 編輯器快捷鍵：Ctrl+Z/Y 撤銷重做，Ctrl+C/X/V 複製剪下貼上，Delete 刪除
 document.addEventListener('keydown', (e) => {
@@ -9536,11 +10367,13 @@ function saveToSlot(n) {
   const slots = loadSaveSlots();
   const prev = slots['slot' + n];
   slots['slot' + n] = editorMapData(prev && prev.name);
+  editor.mapName = prev && prev.name ? prev.name : '自訂迷宮'; // v2.5：記錄地圖名供下載
   writeSaveSlots(slots);
   // 跨區成就 editor_5maps：累計儲存地圖（unlockAchievement 對未定義 id 有防護）
   stats.editorMapsSaved = (stats.editorMapsSaved || 0) + 1;
   saveStats();
   if (stats.editorMapsSaved >= 5) unlockAchievement('editor_5maps');
+  if (stats.editorMapsSaved >= 10) unlockAchievement('editor_10'); // v2.5：累計 10 張
   showToastMsg('已存入存檔槽 ' + n);
 }
 function loadFromSlot(n) {
@@ -9558,6 +10391,7 @@ function loadFromSlot(n) {
   editor.start = { ...data.start }; editor.end = { ...data.end };
   editor.entities = (data.entities || []).map(e => ({ ...e }));
   editor.selectedEntity = null; editor.selection = null;
+  editor.mapName = data.name || null; // v2.5：載入時同步地圖名供 JSON 下載
   calcCellSize();
   syncMapSizeSelect();
   updateEditorStats();
@@ -9577,6 +10411,7 @@ function renameSlot(n) {
   const name = prompt('輸入存檔槽 ' + n + ' 的名稱：', cur);
   if (name === null) return;
   d.name = name.trim() || null;
+  editor.mapName = d.name; // v2.5：重新命名後同步地圖名供 JSON 下載
   writeSaveSlots(slots);
   showToastMsg('已重新命名存檔槽 ' + n);
   promptSaveSlot();
@@ -10048,6 +10883,7 @@ document.getElementById('editor-export').addEventListener('click', () => {
     map: editor.map,
     start: editor.start, end: editor.end,
     entities: editor.entities,
+    name: editor.mapName || '自訂迷宮', // v2.5：帶上地圖名供下載檔名使用
   });
   document.getElementById('io-copy').style.display = 'inline-block';
   document.getElementById('io-download').style.display = 'inline-block';
@@ -10075,8 +10911,15 @@ document.getElementById('io-download').addEventListener('click', () => {
   const blob = new Blob([ioTextarea.value], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'raycast-map.json';
+  // v2.5：檔名含地圖名（從 JSON 內容解析 name；無法解析則用預設檔名）
+  let fname = 'raycast-map';
+  try {
+    const data = JSON.parse(ioTextarea.value);
+    if (data && data.name) fname = String(data.name).replace(/[\\/:*?"<>|]/g, '_');
+  } catch (e) {}
+  a.download = fname + '.json';
   a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
 
 // UB4：把目前編輯器地圖繪到離屏 canvas 並下載為 PNG
@@ -10111,7 +10954,7 @@ function exportEditorImage() {
       g.fillStyle = en.enemyType === 'chaser' ? '#f44' : '#8c4';
       g.beginPath(); g.arc(cx, cy, scale*0.32, 0, Math.PI*2); g.fill();
     } else if (en.type === 'item') {
-      const colors = { health:'#f55', speed:'#5af', shield:'#cdf', star:'#fd8', random:'#fa0' };
+      const colors = { health:'#f55', speed:'#5af', shield:'#cdf', star:'#fd8', random:'#fa0', scroll:'#dcf', charm:'#7fa' };
       g.fillStyle = colors[en.itemType] || '#fa0';
       g.fillRect(en.x*scale + scale*0.25, en.y*scale + scale*0.25, scale*0.5, scale*0.5);
     } else if (en.type === 'key') {
@@ -10266,6 +11109,17 @@ const ACH_DEFS = [
   { id: 'win_streak5',   name: '連勝勇士', desc: '連續通關 5 次', icon: '伍' },
   { id: 'win_streak10',  name: '不敗傳說', desc: '連續通關 10 次', icon: '拾' },
   { id: 'win_streak20',  name: '迷宮主宰', desc: '連續通關 20 次', icon: '廿' },
+  // === v2.5 第三輪新成就（共 10 筆，總數 53） ===
+  { id: 'ice_runner',        name: '寒冰滑行', desc: '單局在冰面累計滑行 50 步', icon: '冰', rarity: 'normal' },
+  { id: 'blood_moon_survivor', name: '血月倖存者', desc: '在血月事件期間存活並通關', icon: '血', rarity: 'hard' },
+  { id: 'lurker_hunter',     name: '潛伏者獵人', desc: '累計擊殺 5 隻潛伏者', icon: '潛', target: 5, rarity: 'normal' },
+  { id: 'crumble_survivor',  name: '斷橋逃生', desc: '被崩落地板碎裂時安全撤離 3 次', icon: '崩', target: 3, rarity: 'normal' },
+  { id: 'no_hit_3',          name: '零傷連勝', desc: '連續 3 局無傷通關', icon: '續', rarity: 'hard' },
+  { id: 'cannon_triple',     name: '火炮齐鸣', desc: '單次炮彈爆炸擊殺 3 隻以上敵人', icon: '炮', rarity: 'normal' },
+  { id: 'combo_30',          name: '連擊狂潮', desc: '單局最高連擊達到 30 段', icon: '潮', rarity: 'hard' },
+  { id: 'overnight_win',     name: '徹夜破關', desc: '在夜晚時段通關迷宮', icon: '宵', rarity: 'normal' },
+  { id: 'item_hopper',       name: '道具雜家', desc: '單局使用過 3 種不同戰鬥道具', icon: '雜', rarity: 'normal' },
+  { id: 'editor_10',         name: '資深設計師', desc: '累計儲存 10 張自訂地圖', icon: '設', target: 10, rarity: 'hard' },
 ];
 
 let achievements = {};
@@ -10334,7 +11188,7 @@ function playAchievementSound() {
     gain.gain.setValueAtTime(0.0001, now + idx * 0.1);
     gain.gain.exponentialRampToValueAtTime(0.15, now + idx * 0.1 + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
-    osc.connect(gain); gain.connect(masterGain);
+    osc.connect(gain); gain.connect(sfxGain);
     osc.start(now + idx * 0.1); osc.stop(now + idx * 0.1 + 0.45);
     cleanupOnEnded(osc, [gain]);
   });
@@ -10422,10 +11276,14 @@ const lightningFlash = document.getElementById('lightning-flash');
 let rainDrops = [];
 let snowFlakes = [];
 let sandMotes = [];
+let auroraMeteors = []; // v2.5：極光天氣的偶發流星粒子
+let auroraT = 0;         // v2.5：極光色帶流動時間
+let auroraMeteorCd = 0;  // v2.5：下一顆流星生成倒數
 let lightningTimer = 0;
 let lightningFlashT = 0;
 let rainNoiseNode = null;
 let rainNoiseGain = null;
+let rainNoiseBuffer = null; // v2.4：重用的雨聲噪聲 buffer
 
 function resizeWeatherCanvas() {
   weatherCanvas.width = window.innerWidth;
@@ -10473,22 +11331,32 @@ function initSand() {
     });
   }
 }
+// v2.5：極光——清空流星粒子與計時（純視覺，不影響移動）
+function initAurora() {
+  auroraMeteors = [];
+  auroraT = 0;
+  auroraMeteorCd = 2 + Math.random() * 3;
+}
 function startRainSound() {
   if (!audioCtx || rainNoiseNode) return;
   try {
-    const bufferSize = audioCtx.sampleRate * 2;
-    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    // v2.4：噪聲 buffer 模組層建立一次重用，多次切換天氣不再重複配置
+    if (!rainNoiseBuffer) {
+      const bufferSize = audioCtx.sampleRate * 2;
+      rainNoiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = rainNoiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    }
     rainNoiseNode = audioCtx.createBufferSource();
-    rainNoiseNode.buffer = buffer;
+    rainNoiseNode.buffer = rainNoiseBuffer;
     rainNoiseNode.loop = true;
     const filter = audioCtx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 1200;
     rainNoiseGain = audioCtx.createGain();
     rainNoiseGain.gain.value = 0;
-    rainNoiseNode.connect(filter); filter.connect(rainNoiseGain); rainNoiseGain.connect(masterGain);
+    // v2.4：雨聲屬環境音 → 接 envGain
+    rainNoiseNode.connect(filter); filter.connect(rainNoiseGain); rainNoiseGain.connect(envGain || sfxGain);
     rainNoiseNode.start();
     rainNoiseGain.gain.linearRampToValueAtTime(settings.weather === 'storm' ? 0.12 : 0.07, audioCtx.currentTime + 0.5);
   } catch (e) {}
@@ -10515,13 +11383,14 @@ function playThunder() {
   gain.gain.setValueAtTime(0.0001, now);
   gain.gain.exponentialRampToValueAtTime(0.25, now + 0.1);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
-  osc.connect(gain); gain.connect(masterGain);
+  osc.connect(gain); gain.connect(sfxGain);
   osc.start(now); osc.stop(now + 0.95);
   cleanupOnEnded(osc, [gain]);
 }
 function applyWeather() {
   // 先還原難度基準（含霧夾緊邏輯），避免切回 clear/rain 後 fogDistance 卡在霧值
-  applyDifficulty();
+  // v2.4：resetMinimap=false —— 切天氣不得覆蓋玩家手動按 M 切換的小地圖狀態
+  applyDifficulty(false);
   const w = settings.weather;
   if (w === 'fog') {
     // applyDifficulty 已對 fog 做 min(基準,6)，此處只調整疊層透明度
@@ -10539,6 +11408,11 @@ function applyWeather() {
     CONFIG.fogDistance = 8;
     fogOverlay.style.opacity = '0.45';
     initSand();
+  } else if (w === 'aurora') {
+    // v2.5：極光——純視覺，不影響能見度與移動；初始化色帶與流星
+    CONFIG.fogDistance = Math.min(CONFIG.fogDistance, 14);
+    fogOverlay.style.opacity = '0.08';
+    initAurora();
   } else {
     // clear / rain：維持難度基準，不動 fogDistance
     fogOverlay.style.opacity = '0';
@@ -10607,6 +11481,54 @@ function updateWeather(dt) {
       if (m.y < 0) m.y = weatherCanvas.height;
       weatherCtx.fillRect(m.x, m.y, m.size, m.size);
     }
+  } else if (w === 'aurora') {
+    // v2.5：極光——天空多條綠色流光色帶（正弦波動），偶發流星粒子；純視覺
+    auroraT += dt;
+    const W = weatherCanvas.width, H = weatherCanvas.height;
+    // 色帶：3 條垂直方向的漸層光幕，水平位置隨時間波浪漂移
+    for (let band = 0; band < 3; band++) {
+      const baseY = H * (0.15 + band * 0.12);
+      const bandH = H * (0.10 + 0.03 * Math.sin(auroraT * 0.5 + band));
+      const grad = weatherCtx.createLinearGradient(0, baseY - bandH, 0, baseY + bandH);
+      const hue = band === 0 ? '120,255,180' : (band === 1 ? '90,230,220' : '180,255,140');
+      grad.addColorStop(0, `rgba(${hue},0)`);
+      grad.addColorStop(0.5, `rgba(${hue},0.18)`);
+      grad.addColorStop(1, `rgba(${hue},0)`);
+      weatherCtx.fillStyle = grad;
+      weatherCtx.beginPath();
+      for (let x = 0; x <= W; x += 8) {
+        const y = baseY + Math.sin(x * 0.008 + auroraT * (0.6 + band * 0.2) + band * 2) * 18;
+        if (x === 0) weatherCtx.moveTo(x, y - bandH);
+        else weatherCtx.lineTo(x, y - bandH);
+      }
+      for (let x = W; x >= 0; x -= 8) {
+        const y = baseY + Math.sin(x * 0.008 + auroraT * (0.6 + band * 0.2) + band * 2) * 18;
+        weatherCtx.lineTo(x, y + bandH);
+      }
+      weatherCtx.closePath();
+      weatherCtx.fill();
+    }
+    // 偶發流星：斜向劃過天際的亮線
+    auroraMeteorCd -= dt;
+    if (auroraMeteorCd <= 0 && auroraMeteors.length < 6) {
+      auroraMeteorCd = 2.5 + Math.random() * 4;
+      auroraMeteors.push({
+        x: Math.random() * W, y: Math.random() * H * 0.3,
+        vx: -(120 + Math.random() * 160), vy: 60 + Math.random() * 80,
+        life: 1.2,
+      });
+    }
+    weatherCtx.strokeStyle = 'rgba(255,255,255,0.8)';
+    weatherCtx.lineWidth = 1.5;
+    weatherCtx.beginPath();
+    for (let i = auroraMeteors.length - 1; i >= 0; i--) {
+      const mt = auroraMeteors[i];
+      mt.x += mt.vx * dt; mt.y += mt.vy * dt; mt.life -= dt;
+      if (mt.life <= 0 || mt.x < -20 || mt.y > H) { auroraMeteors.splice(i, 1); continue; }
+      weatherCtx.moveTo(mt.x, mt.y);
+      weatherCtx.lineTo(mt.x - mt.vx * 0.08, mt.y - mt.vy * 0.08);
+    }
+    weatherCtx.stroke();
   }
   if (lightningFlashT > 0) {
     lightningFlashT -= dt;
@@ -10910,7 +11832,8 @@ setFontSize.addEventListener('change', () => {
   applyAccessibility();
 });
 setColorblind.addEventListener('change', () => {
-  settings.colorblind = (setColorblind.value === 'on');
+  // v2.4：四選一字串 off / protan / deutan / tritan
+  settings.colorblind = setColorblind.value || 'off';
   saveSettings();
   applyAccessibility(); // 即時生效（下次渲染循環套用配色）
 });
@@ -11067,6 +11990,70 @@ document.getElementById('tut-start-btn').addEventListener('click', () => {
   tutorialOverlay.classList.remove('show');
   if (!isMobile && gameStarted && !gameWon && !playerDead) safeRequestPointerLock();
 });
+
+// ============================================================
+//  v2.4：分步任務引導教學（狀態機）
+//  第一次進入遊戲時依序高亮提示：移動 → 攻擊 → 拾取寶石 → 開門；
+//  每步等待玩家完成對應動作才推進；全部可略過（按鈕）。
+//  localStorage 獨立旗標 raycast_step_tutorial_done，不與 raycast_tutorial_done 衝突。
+//  橫幅 pointer-events:none，不阻擋遊戲操作。
+// ============================================================
+const STEP_TUTORIAL_KEY = 'raycast_step_tutorial_done';
+const stepTutEl = document.getElementById('step-tutorial');
+const stepTutText = document.getElementById('step-tut-text');
+const stepTutSkipBtn = document.getElementById('step-tut-skip');
+let stepTutState = -1;          // -1 未啟動；0~3 步驟索引
+let stepTutMoveRef = null;       // 步驟 1 參考位置
+let doorJustOpened = false;      // 步驟 4 由 checkDoors 設定
+const STEP_TUT_STEPS = [
+  '步驟 1/4：使用 W A S D 或左側搖桿移動（Shift 可奔跑）',
+  '步驟 2/4：靠近敵人後按 空白鍵 或 滑鼠左鍵 攻擊',
+  '步驟 3/4：走過青色寶石即可自動拾取',
+  '步驟 4/4：撿到鑰匙後，走過藍色鎖門即可開門',
+];
+function stepTutFinish() {
+  try { localStorage.setItem(STEP_TUTORIAL_KEY, '1'); } catch (e) {}
+  stepTutState = -1;
+  if (stepTutEl) stepTutEl.classList.remove('show');
+}
+function startStepTutorial() {
+  let done = false;
+  try { done = localStorage.getItem(STEP_TUTORIAL_KEY) === '1'; } catch (e) {}
+  if (done) return;
+  stepTutState = 0;
+  stepTutMoveRef = { x: player.x, y: player.y };
+  doorJustOpened = false;
+  stepTutText.textContent = STEP_TUT_STEPS[0];
+  stepTutEl.classList.add('show');
+}
+// 每幀輪詢推進（不掛到各動作函式，避免侵入既有邏輯）
+function updateStepTutorial() {
+  if (stepTutState < 0) return;
+  if (paused || playerDead || gameWon) return;
+  let advance = false;
+  if (stepTutState === 0) {
+    // 移動：離開起點 > 1.5 格
+    if (Math.hypot(player.x - stepTutMoveRef.x, player.y - stepTutMoveRef.y) > 1.5) advance = true;
+  } else if (stepTutState === 1) {
+    // 攻擊：揮砍動畫出現
+    if (attackAnim > 0) advance = true;
+  } else if (stepTutState === 2) {
+    // 拾取寶石
+    if (gemsCollected > 0) advance = true;
+  } else if (stepTutState === 3) {
+    // 開門
+    if (doorJustOpened) advance = true;
+  }
+  if (advance) {
+    stepTutState++;
+    if (stepTutState >= STEP_TUT_STEPS.length) {
+      stepTutFinish();
+    } else {
+      stepTutText.textContent = STEP_TUT_STEPS[stepTutState];
+    }
+  }
+}
+stepTutSkipBtn.addEventListener('click', stepTutFinish);
 
 // ============================================================
 //  載入 / 生成進度提示
