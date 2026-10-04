@@ -4168,23 +4168,43 @@ function renderGod3D(g, CW, CH) {
     }
   }
   // 格子牆體（含門/欄杆/尖刺）
+  // v2.6：連續牆面＋隱面剔除——每個側面只在「鄰格非實心牆（暴露）」且「朝向視角（背面剔除）」時繪製，
+  // 相鄰牆自動合併成連續牆體，不再是一格一格獨立積木；旋轉視角後背面自動隱藏。
   const wallCol = '#6a7390';
-  const wallSide1 = '#4c536b';  // 右下側（暗）
-  const wallSide2 = '#3a4055';  // 左下側（更暗）
+  const wallSide1 = '#4c536b';  // 東西向側面（暗）
+  const wallSide2 = '#3a4055';  // 南北向側面（更暗）
+  // 側面定義：世界法向量 (dx,dy)。可視 ⇔ 法向量旋轉後與東南視線點積 > 0。
+  const SIDE_DEFS = [
+    { dx: 1,  dy: 0,  col: wallSide1 },
+    { dx: 0,  dy: 1,  col: wallSide2 },
+    { dx: -1, dy: 0,  col: wallSide1 },
+    { dx: 0,  dy: -1, col: wallSide2 },
+  ];
+  const solidAt = (gx, gy) => {
+    if (gx < 0 || gy < 0 || gx >= MAP_W || gy >= MAP_H) return true; // 地圖外視為牆
+    const t = MAP[gy][gx];
+    return t === 1 || t === 2 || t === 3;
+  };
   for (const [x, y] of cells) {
     const v = MAP[y][x];
-    let col = null, h = 0;
-    if (v === 1 || v === 2 || v === 3) { col = wallCol; h = S * wallH; }
+    let col = null, h = 0, isSolid = false;
+    if (v === 1 || v === 2 || v === 3) { col = wallCol; h = S * wallH; isSolid = true; }
     else if (v === TILE_DOOR) { col = '#c08a3e'; h = S * wallH * 0.55; }
     else if (v === TILE_BARS) { col = '#7b8498'; h = S * wallH * 0.5; }
     if (col) {
-      const p0 = proj(x, y, 0), p1 = proj(x + 1, y, 0), p2 = proj(x + 1, y + 1, 0), p3 = proj(x, y + 1, 0);
       const t0 = proj(x, y, h), t1 = proj(x + 1, y, h), t2 = proj(x + 1, y + 1, h), t3 = proj(x, y + 1, h);
-      // 右下側面
-      poly([p1, t1, t2, p2], wallSide1);
-      // 左下側面
-      poly([p2, t2, t3, p3], wallSide2);
-      // 頂面
+      // 側面：只畫「暴露於空地」且「朝向視角」的面（背面/內部面不畫 → 連續牆體）
+      for (const sd of SIDE_DEFS) {
+        if (isSolid && solidAt(x + sd.dx, y + sd.dy)) continue;      // 相鄰實心牆：內部面合併
+        const vis = sd.dx * (cosY + sinY) + sd.dy * (cosY - sinY);
+        if (vis <= 0) continue;                                       // 背面剔除
+        const ax = sd.dx === 1 ? x + 1 : x, ay = sd.dy === 1 ? y + 1 : y;
+        const bx = sd.dx === -1 ? x : x + 1, by = sd.dy === -1 ? y : y + 1;
+        const a0 = proj(ax, ay, 0), a1 = proj(ax, ay, h);
+        const b0 = proj(bx, by, 0), b1 = proj(bx, by, h);
+        poly([a0, a1, b1, b0], sd.col);
+      }
+      // 頂面（連續同色、無描邊 → 與相鄰牆格頂面連成一片）
       poly([t0, t1, t2, t3], col);
     } else if (v === TILE_SPIKE) {
       const c = proj(x + 0.5, y + 0.5, 0);
@@ -7710,6 +7730,9 @@ function updateAutoPlay(dt) {
   const maxTurn = autoTurnSpeed * dt;
   if (Math.abs(turnAngle) > 0.01) {
     player.dir += Math.sign(turnAngle) * Math.min(Math.abs(turnAngle), maxTurn);
+    // v2.7：轉向角歸位（避免長期自動遊玩 dir 累加出 ±π 範圍）
+    if (player.dir > Math.PI) player.dir -= Math.PI * 2;
+    if (player.dir < -Math.PI) player.dir += Math.PI * 2;
   }
 
   // === AI 衝刺：玩家前方直線 ≥3 格皆可通行（無牆/門/欄柵）即立刻衝刺加速 ===
@@ -7747,6 +7770,21 @@ function updateAutoPlay(dt) {
     const moveDist = autoMoveSpeed * dt * speedFactor;
     const mx = Math.cos(player.dir) * moveDist;
     const my = Math.sin(player.dir) * moveDist;
+    // v2.7：自動遊玩穿門——尋路視鎖門可走，但物理碰撞把門當牆；
+    // 前方移動被鎖門擋住時 AI 直接開門（無需鑰匙），避免斜向接近門無法貼近開門而卡死。
+    const doorOpenTargets = [];
+    if (!canMove(player.x + mx, player.y)) doorOpenTargets.push([Math.floor(player.x + mx), Math.floor(player.y)]);
+    if (!canMove(player.x, player.y + my)) doorOpenTargets.push([Math.floor(player.x), Math.floor(player.y + my)]);
+    if (!canMove(player.x + mx, player.y + my)) doorOpenTargets.push([Math.floor(player.x + mx), Math.floor(player.y + my)]);
+    for (const [tx, ty] of doorOpenTargets) {
+      if (mapAt(tx, ty) === TILE_DOOR &&
+          Math.abs(player.x - (tx + 0.5)) < 1.3 && Math.abs(player.y - (ty + 0.5)) < 1.3) {
+        MAP[ty][tx] = 0;
+        currentMapVersion++;
+        pendingReplann = true;
+        playDoorOpen();
+      }
+    }
     // v2.5：自動遊玩同樣套用冰面滑行物理（卡住偵測容忍滑行期的連續位移）
     movePlayerWithSlide(mx, my, dt);
   }
