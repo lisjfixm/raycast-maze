@@ -655,6 +655,19 @@
     display: none;
   }
   body.is-mobile #touch-controls { display: block; }
+  /* v2.6：上帝視角開啟時，移動端搖桿/按鈕浮到上帝畫布之上仍可操控角色；
+     右半屏轉向區讓位給「拖曳轉動上帝視角」；
+     控制列移到頂部中央，避開左下搖桿區 */
+  body.is-mobile.god-open #touch-controls { z-index: 130; }
+  body.is-mobile.god-open #look-zone { pointer-events: none; }
+  body.is-mobile.god-open #god-view { align-items: flex-start; }
+  body.is-mobile.god-open .god-controls {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 0;
+  }
   body.is-mobile #info-panel,
   body.is-mobile #torch-slider-wrap { display: none; }
 
@@ -3200,8 +3213,9 @@ let highestLevelThisRun = 1;
 let highestLevelEver = 1;
 
 // --- 技能：衝刺 / 連擊 ---
-const dashState = { cd: 0, active: 0, dirX: 0, dirY: 0, used: 0, trailT: 0 };
-const DASH_CD = 3.0, DASH_TIME = 0.28, DASH_DIST = 3.0;
+const dashState = { cd: 0, active: 0, dirX: 0, dirY: 0, used: 0, trailT: 0, dist: 0 };
+// v2.6：衝刺＝立刻向正前方衝 3 格，撞牆立即停止，冷卻 5 秒
+const DASH_CD = 5.0, DASH_TIME = 0.28, DASH_DIST = 3.0;
 let comboCount = 0;         // 目前連擊數（短時間內連續攻擊）
 let comboTimer = 0;
 let comboTriggers = 0;      // 本局觸發 3 連擊次數
@@ -3394,6 +3408,7 @@ function clearKeys() {
 
 // --- 自動遊玩狀態 ---
 let autoPlay = false;
+let aiDashReplan = false;    // v2.6：AI 衝刺結束後強制重算路徑（防止跳過路徑點後折返）
 let wonByAuto = false;       // 本局是否以自動遊玩通關（成就判定用）
 let autoPath = [];       // 路徑格子陣列 [{x,y}, ...]
 let autoPathIndex = 0;   // 當前路徑索引
@@ -4327,6 +4342,8 @@ function toggleGodView() {
   const b = document.getElementById('btn-god');
   if (gv) gv.style.display = godView ? 'flex' : 'none';
   if (b) b.classList.toggle('active', godView);
+  // v2.6：body 標記 god-open，讓移動端搖桿/按鈕浮到上帝畫布之上仍可操控
+  document.body.classList.toggle('god-open', godView);
   if (godView) {
     if (document.pointerLockElement) document.exitPointerLock();
     renderGodView();
@@ -7033,6 +7050,7 @@ function tryDash() {
   dashState.cd = DASH_CD;
   dashState.dirX = Math.cos(player.dir);
   dashState.dirY = Math.sin(player.dir);
+  dashState.dist = DASH_DIST;   // 剩餘衝刺距離（撞牆立即停止）
   dashState.used++;
   setAchProgress('dash_master', dashState.used);
   buffs.invincible = Math.max(buffs.invincible, DASH_TIME); // 衝刺無敵
@@ -7443,6 +7461,7 @@ function stopAutoPlay() {
   autoPlay = false;
   autoPath = [];
   autoPathIndex = 0;
+  aiDashReplan = false;
   stuckTimer = 0;
   pathMarkGrid = null;
   pathMarkWalked.clear();
@@ -7618,10 +7637,13 @@ function updateAutoPlay(dt) {
   const movedDist = Math.sqrt((player.x - stuckLastX) ** 2 + (player.y - stuckLastY) ** 2);
   if (movedDist < 0.02) {
     stuckTimer += dt;
-    if (stuckTimer > 0.8) {
-      // 卡住超過0.8秒：先試正常平滑重規劃；連續卡住≥2次則退回格中心路徑
+    // v2.6：卡住偵測加快（0.4 秒即重規劃），並先向後退 0.12 格解卡，避免原地卡同一個牆角
+    if (stuckTimer > 0.4) {
       stuckTimer = 0;
       autoStuckCount++;
+      const bx = player.x - Math.cos(player.dir) * 0.12;
+      const by = player.y - Math.sin(player.dir) * 0.12;
+      if (canMove(bx, by)) { player.x = bx; player.y = by; }
       const skip = autoStuckCount >= 2;
       if (planNextAutoTarget(skip)) return; // 重新規劃成功，下一幀繼續
       else { stopAutoPlay(); return; }
@@ -7634,10 +7656,24 @@ function updateAutoPlay(dt) {
   stuckLastY = player.y;
 
   // === 到達/通過判斷（多條件，避免卡在門檻上）===
-  // 1. 足夠接近
+  // 1. 足夠接近（轉彎點要求更貼近格中心，避免斜向切角撞牆）
   // 2. 已通過目標點（移動方向與目標方向相反，且曾經接近）
   const moveDot = (dx * Math.cos(player.dir) + dy * Math.sin(player.dir)) / Math.max(dist, 0.01);
-  if (dist < 0.5 || (dist < 0.9 && moveDot < -0.3)) {
+  // v2.6：轉彎點＝路徑上一段方向與下一段方向明顯不同（以路徑段計算，非玩家視角）→
+  // 先更貼近格中心再轉向，從格中心出發的斜向移動必在走廊內，根治「轉彎撞牆角卡住」。
+  let reachDist = 0.5;
+  if (autoPathIndex + 1 < autoPath.length && autoPathIndex >= 1) {
+    const prev = autoPath[autoPathIndex - 1];
+    const cur = autoPath[autoPathIndex];
+    const nxt = autoPath[autoPathIndex + 1];
+    const inDir = Math.atan2((cur.y + 0.5) - (prev.y + 0.5), (cur.x + 0.5) - (prev.x + 0.5));
+    const outDir = Math.atan2((nxt.y + 0.5) - (cur.y + 0.5), (nxt.x + 0.5) - (cur.x + 0.5));
+    let d = outDir - inDir;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    if (Math.abs(d) > 0.55) reachDist = 0.35;
+  }
+  if (dist < reachDist || (dist < 0.9 && moveDot < -0.3)) {
     // 標記已走過的路徑格（逐漸變暗）
     if (pathMarkGrid) {
       const ci = autoPathIndex - 1;
@@ -7674,6 +7710,31 @@ function updateAutoPlay(dt) {
   const maxTurn = autoTurnSpeed * dt;
   if (Math.abs(turnAngle) > 0.01) {
     player.dir += Math.sign(turnAngle) * Math.min(Math.abs(turnAngle), maxTurn);
+  }
+
+  // === AI 衝刺：玩家前方直線 ≥3 格皆可通行（無牆/門/欄柵）即立刻衝刺加速 ===
+  if (dashState.cd <= 0 && dashState.active <= 0 && Math.abs(angleDiff) < 0.5) {
+    const cosD = Math.cos(player.dir), sinD = Math.sin(player.dir);
+    const mainX = Math.abs(cosD) > Math.abs(sinD);
+    const main = mainX ? Math.abs(cosD) : Math.abs(sinD);
+    // 僅在朝向近乎筆直（走廊軸向）時衝刺，避免斜向衝刺撞牆
+    if (main > 0.85) {
+      const sx = Math.sign(cosD) || 1, sy = Math.sign(sinD) || 1;
+      let clear = true;
+      for (let k = 1; k <= 3; k++) {
+        const gx = Math.floor(player.x + (mainX ? sx * k : 0));
+        const gy = Math.floor(player.y + (mainX ? 0 : sy * k));
+        if (gx < 0 || gy < 0 || gx >= MAP_W || gy >= MAP_H ||
+            !(isWalkable(MAP[gy][gx]) || (pfAutoDoors && MAP[gy][gx] === TILE_DOOR))) { clear = false; break; }
+      }
+      if (clear) { tryDash(); aiDashReplan = true; }
+    }
+  }
+
+  // === AI 衝刺結束：重算路徑（衝刺可能跳過多個路徑點，直接從新位置規劃到目標）===
+  if (aiDashReplan && dashState.active <= 0 && autoPathIndex < autoPath.length) {
+    aiDashReplan = false;
+    if (planNextAutoTarget(true)) return;
   }
 
   // 移動：接近目標時減速，防止衝過頭
@@ -7836,31 +7897,38 @@ function update(dt) {
 
   player.dir += rot * rs;
 
-  let dx, dy;
-  // 衝刺中：覆寫移動，沿衝刺方向高速前進
+  let dx, dy, movedDist;
+  // 衝刺中：沿衝刺方向高速前進（距離制，撞牆立即停止）
   if (dashState.active > 0) {
     dashState.active -= dt;
     const dashSpeed = DASH_DIST / DASH_TIME;
-    dx = dashState.dirX * dashSpeed * dt;
-    dy = dashState.dirY * dashSpeed * dt;
+    const step = Math.min(dashSpeed * dt, dashState.dist);
+    dashState.dist -= step;
+    dx = dashState.dirX * step;
+    dy = dashState.dirY * step;
     // 殘影粒子
     dashState.trailT -= dt;
     if (dashState.trailT <= 0) {
       dashState.trailT = 0.03;
       spawnParticle(player.x, player.y, 0.4, 0, 0, 0.5, 0.3, [150,200,255], 2);
     }
+    // 撞牆立即停止：整體位移檢查，前方被擋就結束衝刺
+    const nx = player.x + dx, ny = player.y + dy;
+    if (canMove(nx, ny)) { player.x = nx; player.y = ny; movedDist = Math.sqrt(dx * dx + dy * dy); }
+    else { dashState.active = 0; movedDist = 0; }
+    stepAccum += movedDist;
   } else {
     dx = Math.cos(player.dir) * move * speed + Math.cos(player.dir + Math.PI/2) * strafe * speed;
     dy = Math.sin(player.dir) * move * speed + Math.sin(player.dir + Math.PI/2) * strafe * speed;
+
+    const oldX = player.x, oldY = player.y;
+    // v2.5：移動經過滑行物理函數（冰面 tile 7 套用低摩擦慣性，一般地面行為不變）
+    movePlayerWithSlide(dx, dy, dt);
+    movedDist = Math.sqrt((player.x - oldX) ** 2 + (player.y - oldY) ** 2);
+    stepAccum += movedDist;
   }
 
-  const oldX = player.x, oldY = player.y;
-  // v2.5：移動經過滑行物理函數（冰面 tile 7 套用低摩擦慣性，一般地面行為不變）
-  movePlayerWithSlide(dx, dy, dt);
-  const movedDist = Math.sqrt((player.x - oldX) ** 2 + (player.y - oldY) ** 2);
-  stepAccum += movedDist;
-
-  // 撞牆偵測：企圖移動但被阻擋
+  // 撞牆偵測：企圖移動但被阻擋（僅非衝刺移動）
   const attemptedMove = Math.sqrt(dx*dx + dy*dy);
   if (attemptedMove > 0.001 && movedDist < attemptedMove * 0.3) {
     if (shakeTime <= 0) { playWallHit(); }
@@ -8921,7 +8989,7 @@ function resetGameState() {
   bossHitTaken = false;
   runTorchUsed = false;
   diffAdj = (typeof computeDifficultyAdjust === 'function') ? computeDifficultyAdjust() : { hpMult: 1, countMult: 1 };
-  dashState.cd = 0; dashState.active = 0; dashState.used = 0; dashState.trailT = 0;
+  dashState.cd = 0; dashState.active = 0; dashState.used = 0; dashState.trailT = 0; dashState.dist = 0;
   comboCount = 0; comboTimer = 0; comboTriggers = 0;
   clearProjectiles(); // v2.5：投射物池清空（取代舊 projectiles.length = 0）
   playerAmmo = 0;
