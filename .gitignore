@@ -2,3 +2,6 @@
 .tmp-tool-results/
 *.log
 .DS_Store
+
+# 測試腳本（不回傳倉庫）
+.verify/
