@@ -1527,6 +1527,16 @@
   }
   #damage-vignette.flash { opacity: 1; transition: opacity 0.05s; }
   body.no-screen-effects #damage-vignette { display: none !important; }
+  /* v3.3：傷害方向指示——紅色弧形暗角集中在上方，由 JS rotate 指向受擊邊緣 */
+  #damage-dir {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9;
+    box-shadow: inset 0 90px 110px -40px rgba(225, 35, 35, 0.9);
+    transition: opacity 0.08s linear;
+  }
+  body.no-screen-effects #damage-dir { display: none !important; }
 
   /* ===== 死亡畫面 ===== */
   #death-screen {
@@ -2500,7 +2510,7 @@
     <button id="editor-btn" style="margin-top:14px;background:linear-gradient(135deg,#666,#444);box-shadow:0 0 15px rgba(100,100,100,0.3);">自訂地圖</button>
     <button id="autoplay-btn" style="margin-top:10px;background:linear-gradient(135deg,#a4f,#82c);box-shadow:0 0 15px rgba(170,68,255,0.3);">AI 自動遊玩</button>
     <button id="ach-btn" style="margin-top:10px;background:linear-gradient(135deg,#c93,#960);box-shadow:0 0 15px rgba(255,200,60,0.3);">成就與統計</button>
-    <div id="start-info">版本 v3.0　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
+    <div id="start-info">版本 <span id="start-version">v3.3</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
   </div>
 
   <!-- 勝利畫面 -->
@@ -2540,6 +2550,21 @@
       <button class="pause-btn" id="pause-restart-btn">重新開始</button>
       <button class="pause-btn danger" id="back-editor-btn" style="display:none;">返回編輯器</button>
       <button class="pause-btn danger" id="pause-menu-btn">返回主選單</button>
+      <details style="margin-top:10px;text-align:left;font-size:13px;color:#bcd;border:1px solid #334;border-radius:6px;padding:6px 10px;background:rgba(0,0,0,0.25);">
+        <summary style="cursor:pointer;font-weight:bold;color:#8df;outline:none;">操作說明</summary>
+        <div style="margin-top:6px;line-height:1.7;">
+          <div>移動：W / A / S / D　或方向鍵</div>
+          <div>攻擊：滑鼠左鍵　或　空白鍵</div>
+          <div>衝刺：Q　或　雙擊 Shift</div>
+          <div>道具：1 護盾／2 手雷／3 炮彈／4 霜雷／5 回溯</div>
+          <div>手電筒：F　切換；滑桿調強度</div>
+          <div>小地圖：M　切換顯示</div>
+          <div>上帝視角：G　切換</div>
+          <div>能量彈：E　發射</div>
+          <div>蹲下：C　切換潛行</div>
+          <div>暫停：Esc</div>
+        </div>
+      </details>
     </div>
     <div class="settings-panel" id="settings-panel" style="display:none;">
       <h2>設定</h2>
@@ -2877,6 +2902,57 @@ const startControls = document.getElementById('start-controls');
 // v2.4：每幀都會存取的 DOM 參照提早快取（避免每幀 getElementById）
 const dmgVigEl = document.getElementById('damage-vignette');
 const attackSwingEl = document.getElementById('attack-swing');
+// v3.3：每幀存取的 DOM 參照提早快取（終點箭頭/距離、後處理疊層、Boss HUD、增益 HUD）
+const exitArrowEl = document.getElementById('exit-arrow');
+const exitDistEl = document.getElementById('exit-dist');
+const postfxOverlayEl = document.getElementById('postfx-overlay');
+const bossHudEl = document.getElementById('boss-hud');
+const bossBarInnerEl = document.getElementById('boss-bar-inner');
+const buffsHudEl = document.getElementById('buffs-hud');
+// v3.3：版本字串常數——開始畫面版本標籤統一引用此處，避免改版漏改
+const GAME_VERSION = 'v3.3';
+// v3.3：傷害方向指示 overlay（JS 建立，紅色弧形暗角依受擊方向轉向）
+const damageDirEl = document.createElement('div');
+damageDirEl.id = 'damage-dir';
+damageDirEl.style.opacity = '0';
+document.body.appendChild(damageDirEl);
+// v3.3：傷害方向狀態 _dmgDirT=剩餘秒數，_dmgDirAngle=overlay 旋轉角（rad）
+let _dmgDirT = 0;
+let _dmgDirAngle = 0;
+function triggerDamageDirection() {
+  if (!settings.screenEffects) return;
+  // 找最近的活體敵人或投射物作為方向來源（自包含，免改呼叫點）
+  let bestD = Infinity, ang = 0, found = false;
+  for (const e of enemies) {
+    if (!e || e.state === 'dead') continue;
+    const dx = e.x - player.x, dy = e.y - player.y;
+    const d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; ang = Math.atan2(dy, dx); found = true; }
+  }
+  for (const pr of projectiles) {
+    if (!pr || !pr.active) continue;
+    const dx = pr.x - player.x, dy = pr.y - player.y;
+    const d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; ang = Math.atan2(dy, dx); found = true; }
+  }
+  if (!found) return;
+  let rel = ang - player.dir;
+  while (rel > Math.PI) rel -= Math.PI * 2;
+  while (rel < -Math.PI) rel += Math.PI * 2;
+  // 預設暗角在「上方」，旋轉 -rel 把它對準受擊螢幕邊緣
+  _dmgDirAngle = -rel;
+  _dmgDirT = 0.25;
+}
+function updateDamageDir(dt) {
+  if (!damageDirEl) return;
+  if (_dmgDirT > 0) {
+    _dmgDirT -= dt;
+    damageDirEl.style.opacity = Math.max(0, Math.min(1, _dmgDirT / 0.25)).toFixed(3);
+    damageDirEl.style.transform = `rotate(${_dmgDirAngle}rad)`;
+  } else if (damageDirEl.style.opacity !== '0') {
+    damageDirEl.style.opacity = '0';
+  }
+}
 
 // --- 偵測移動端 ---
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -3178,14 +3254,25 @@ function applyDifficulty(resetMinimap = true) {
 }
 
 // 動態難度：依連敗/連勝調整敵人 HP 與數量乘數（夾在 0.7~1.3）
+// v3.3：難度跨閾 toast 狀態——tier: -1=連敗變弱, 0=正常, 1=連勝變強
+let _diffTierInit = false;
+let _lastDiffTier = 0;
 function computeDifficultyAdjust() {
   const adj = { hpMult: 1, countMult: 1 };
   const deathStreak = stats.deathStreak || 0;
   const winStreak = stats.winStreak || 0;
-  if (deathStreak >= 3) { adj.hpMult = 0.8; adj.countMult = 0.8; }
-  else if (winStreak >= 3) { adj.hpMult = 1.15; adj.countMult = 1.1; }
+  let tier = 0;
+  if (deathStreak >= 3) { adj.hpMult = 0.8; adj.countMult = 0.8; tier = -1; }
+  else if (winStreak >= 3) { adj.hpMult = 1.15; adj.countMult = 1.1; tier = 1; }
   adj.hpMult = Math.min(1.3, Math.max(0.7, adj.hpMult));
   adj.countMult = Math.min(1.3, Math.max(0.7, adj.countMult));
+  // v3.3：連勝/連敗跨閾時簡潔 toast（初次不跳，避免開局洗版）
+  if (_diffTierInit && tier !== _lastDiffTier && typeof showToast === 'function') {
+    if (tier === 1) showToast('連勝中！敵人變強了');
+    else if (tier === -1) showToast('連敗中…敵人變弱了');
+  }
+  _lastDiffTier = tier;
+  _diffTierInit = true;
   return adj;
 }
 window.addEventListener('resize', resize);
@@ -3698,6 +3785,7 @@ let endParticleTimer = 0;
 // --- 玩法延伸狀態（跨區共用預設值；resetGameState 會重設 checkpoint/bossHitTaken/runTorchUsed/diffAdj） ---
 let revealTimer = 0;        // 地圖卷軸效果剩餘秒數（小地圖揭露敵人）
 let lightningRevealT = 0;   // 閃電瞬間揭露小地圖敵人剩餘秒數
+let clairTimer = 0;         // v3.3：透視藥水效果剩餘秒數（小地圖標示未收集寶石，不分難度）
 let checkpoint = null;       // 寶石檢查點 {x, y}
 let bossHitTaken = false;    // 本場 Boss 戰是否曾受真實傷害
 let runTorchUsed = false;    // 本局是否調高/開啟火炬
@@ -3763,6 +3851,32 @@ function mulberry32(a) {           /* v3.0 */
 function dailySeedValue() {        // v3.0：以當地日期為種子（YYYYMMDD）
   const d = new Date();
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+// v3.3：每日迷宮連續打卡——localStorage 記錄上次完成日期＋連續天數
+const DAILY_STREAK_KEY = 'raycast_daily_streak_v1';
+function loadDailyStreak() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(DAILY_STREAK_KEY));
+    if (raw && typeof raw === 'object') return { streak: raw.streak|0, lastDate: raw.lastDate||'' };
+  } catch (e) {}
+  return { streak: 0, lastDate: '' };
+}
+function saveDailyStreak(data) {
+  try { localStorage.setItem(DAILY_STREAK_KEY, JSON.stringify(data)); } catch (e) {}
+}
+// 通關每日迷宮時呼叫：回傳更新後的連續天數（當日重複通關不重複累加）
+function recordDailyStreakWin() {
+  const today = String(dailySeedValue());
+  const data = loadDailyStreak();
+  if (data.lastDate === today) return data.streak; // 今日已打卡
+  // 計算昨天 YYYYMMDD
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  const yesterday = String(d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate());
+  data.streak = (data.lastDate === yesterday) ? (data.streak|0) + 1 : 1;
+  data.lastDate = today;
+  saveDailyStreak(data);
+  return data.streak;
 }
 
 // --- 腳步聲計時 ---
@@ -4866,12 +4980,13 @@ function render() {
     }
 
     // 天花板：依日夜循環的漸層（星點於 putImageData 後疊加，較高效）
+    // v3.3：ambientSkyTop/Bot 提到欄迴圈外，避免每像素重讀陣列
+    const sr = ambientSkyTop[0], sg = ambientSkyTop[1], sb = ambientSkyTop[2];
+    const tr = ambientSkyBot[0], tg = ambientSkyBot[1], tb = ambientSkyBot[2];
     for (let y = 0; y < drawStart; y++) {
       const pi = (y * W + x) * 4;
       const t = y / (H / 2);
       const fog = t * 0.7;
-      const sr = ambientSkyTop[0], sg = ambientSkyTop[1], sb = ambientSkyTop[2];
-      const tr = ambientSkyBot[0], tg = ambientSkyBot[1], tb = ambientSkyBot[2];
       buf[pi]   = sr * (1 - fog) + tr * fog;
       buf[pi+1] = sg * (1 - fog) + tg * fog;
       buf[pi+2] = sb * (1 - fog) + tb * fog;
@@ -4894,6 +5009,8 @@ function render() {
       const cellMY = Math.floor(floorY);
       const isStartCell = (cellMX === Math.floor(START.x) && cellMY === Math.floor(START.y));
       const isEndCell = (cellMX === Math.floor(END.x) && cellMY === Math.floor(END.y));
+      // v3.3：mapAt 只算一次，避免尖刺/冰/崩落三分支重複查詢
+      const cellTile = mapAt(cellMX, cellMY);
 
       let baseR, baseG, baseB;
       if (isStartCell) {
@@ -4907,7 +5024,7 @@ function render() {
         baseR = tile ? 180 + pulse * 60 : 140 + pulse * 50;
         baseG = tile ? 140 + pulse * 50 : 100 + pulse * 40;
         baseB = tile ? 20 : 15;
-      } else if (mapAt(cellMX, cellMY) === TILE_SPIKE) {
+      } else if (cellTile === TILE_SPIKE) {
         // 尖刺陷阱：深紅底 + 四個亮紅尖刺（依玩家距離升起）
         const lx = floorX - cellMX, ly = floorY - cellMY;
         const gx = (lx < 0.5 ? 0.25 : 0.75);
@@ -4922,7 +5039,7 @@ function render() {
           const bright = 130 + rise * 110;
           baseR = bright; baseG = 40; baseB = 40;
         }
-      } else if (mapAt(cellMX, cellMY) === TILE_ICE) {
+      } else if (cellTile === TILE_ICE) {
         // v2.5：冰面——冰藍色棋盤，略帶高光反射感
         baseR = tile ? 120 : 95;
         baseG = tile ? 195 : 165;
@@ -4930,7 +5047,7 @@ function render() {
         // 微弱高光閃爍（冰晶反光）
         const sparkle = (Math.sin(floorX * 6.3 + floorY * 4.1) * 0.5 + 0.5) * 12;
         baseR += sparkle; baseG += sparkle; baseB += sparkle;
-      } else if (mapAt(cellMX, cellMY) === TILE_CRUMBLE) {
+      } else if (cellTile === TILE_CRUMBLE) {
         // v2.5：崩落地板——灰褐基底；倒數中依 crackState 紅色警示閃爍
         baseR = tile ? 90 : 70;
         baseG = tile ? 78 : 60;
@@ -5122,6 +5239,9 @@ function render() {
       const drawEndX = Math.floor(size / 2 + spriteScreenX);
       const centerY = Math.floor(H / 2 - size / 2 + bob * H / tY * 0.3);
       const rotate = Math.sin(frameNow * 0.004 + gem.phase);
+      // v3.3：寶石顏色只依色盲模式（每幀常數），提到精靈開頭算一次，避免每像素呼叫
+      const gemRGB = getGemRGB();
+      const gemR = gemRGB[0], gemG = gemRGB[1], gemB = gemRGB[2];
 
       for (let stripe = Math.max(0, drawStartX); stripe < Math.min(W, drawEndX); stripe++) {
         if (tY >= zBuffer[stripe]) continue;
@@ -5134,11 +5254,9 @@ function render() {
           const glow = (1 - absRelX) * (1 - Math.abs(dyR) * 0.5);
           const a = glow * 0.9;
           const pi = (y * W + stripe) * 4;
-          // v2.4：寶石顏色依色盲模式（getGemRGB）
-          const gemRGB = getGemRGB();
-          buf[pi]   = buf[pi]   * (1 - a) + gemRGB[0] * a;
-          buf[pi+1] = buf[pi+1] * (1 - a) + gemRGB[1] * a;
-          buf[pi+2] = buf[pi+2] * (1 - a) + gemRGB[2] * a;
+          buf[pi]   = buf[pi]   * (1 - a) + gemR * a;
+          buf[pi+1] = buf[pi+1] * (1 - a) + gemG * a;
+          buf[pi+2] = buf[pi+2] * (1 - a) + gemB * a;
         }
       }
     } else if (sp.kind === 'enemy') {
@@ -5562,6 +5680,18 @@ function renderMinimap() {
       miniCtx.beginPath();
       miniCtx.arc(gem.x * cellW, gem.y * cellH, 2.5, 0, Math.PI * 2);
       miniCtx.fill();
+    }
+  }
+  // v3.3：透視藥水——不分難度，以淡青色小環標示未收集寶石（不擋視野）
+  if (clairTimer > 0) {
+    const pulse = 0.5 + Math.sin(frameNow * 0.008) * 0.5;
+    miniCtx.strokeStyle = `rgba(120, 255, 200, ${0.55 + pulse * 0.35})`;
+    miniCtx.lineWidth = 1;
+    for (const gem of gems) {
+      if (gem.collected) continue;
+      miniCtx.beginPath();
+      miniCtx.arc(gem.x * cellW, gem.y * cellH, 3.5, 0, Math.PI * 2);
+      miniCtx.stroke();
     }
   }
   // 敵人位置（紅點）— 預設 easy/normal；地圖卷軸或閃電揭露時不受難度限制
@@ -6185,34 +6315,38 @@ function generateGems() {
   {
     pfAutoDoors = true; // 門算可走（自動遊玩會開門）
     pfIgnoreEnd = true;
-    const sx = Math.floor(START.x), sy = Math.floor(START.y);
-    const visited = new Uint8Array(MAP_W * MAP_H);
-    const qH = [sy * MAP_W + sx];
-    visited[sy * MAP_W + sx] = 1;
-    while (qH.length) {
-      const c = qH.shift();
-      const cx = c % MAP_W, cy = (c / MAP_W) | 0;
-      // v3.2：傳送點視為通道——抵達一端，另一端也標記可達
-      for (const tp of teleporters) {
-        if (cx === tp.ax && cy === tp.ay) {
-          const k2 = tp.by * MAP_W + tp.bx;
-          if (!visited[k2]) { visited[k2] = 1; qH.push(k2); }
-        } else if (cx === tp.bx && cy === tp.by) {
-          const k2 = tp.ay * MAP_W + tp.ax;
-          if (!visited[k2]) { visited[k2] = 1; qH.push(k2); }
+    try {
+      const sx = Math.floor(START.x), sy = Math.floor(START.y);
+      const visited = new Uint8Array(MAP_W * MAP_H);
+      const qH = [sy * MAP_W + sx];
+      visited[sy * MAP_W + sx] = 1;
+      while (qH.length) {
+        const c = qH.shift();
+        const cx = c % MAP_W, cy = (c / MAP_W) | 0;
+        // v3.2：傳送點視為通道——抵達一端，另一端也標記可達
+        for (const tp of teleporters) {
+          if (cx === tp.ax && cy === tp.ay) {
+            const k2 = tp.by * MAP_W + tp.bx;
+            if (!visited[k2]) { visited[k2] = 1; qH.push(k2); }
+          } else if (cx === tp.bx && cy === tp.by) {
+            const k2 = tp.ay * MAP_W + tp.ax;
+            if (!visited[k2]) { visited[k2] = 1; qH.push(k2); }
+          }
+        }
+        for (let d = 0; d < 8; d++) {
+          const n = passableNeighbor(cx, cy, d);
+          if (n < 0 || visited[n]) continue;
+          visited[n] = 1;
+          qH.push(n);
         }
       }
-      for (let d = 0; d < 8; d++) {
-        const n = passableNeighbor(cx, cy, d);
-        if (n < 0 || visited[n]) continue;
-        visited[n] = 1;
-        qH.push(n);
-      }
+      gems = gems.filter(g => visited[Math.floor(g.y) * MAP_W + Math.floor(g.x)] === 1);
+      gemsTotal = gems.length;
+    } finally {
+      // v3.3：try/finally 保護，任何異常路徑旗標必復位
+      pfIgnoreEnd = false;
+      pfAutoDoors = false;
     }
-    gems = gems.filter(g => visited[Math.floor(g.y) * MAP_W + Math.floor(g.x)] === 1);
-    gemsTotal = gems.length;
-    pfIgnoreEnd = false;
-    pfAutoDoors = false;
   }
   updateGemHUD();
 }
@@ -6530,11 +6664,11 @@ function generateItems() {
   const candidates = collectEmptyCandidates(4);
   // 有怪模式才有戰鬥道具（護盾/手雷/炮彈）；無怪模式只出輔助道具
   const types = settings.monsterMode === 'none'
-    ? ['health', 'speed', 'star', 'crystal', 'xpgem', 'maxup', 'reveal']
-    : ['health', 'speed', 'shield', 'star', 'crystal', 'xpgem', 'maxup', 'reveal', 'grenade', 'cannon', 'scroll', 'charm', 'frost_grenade', 'recall_scroll']; // v3.0 +新道具
+    ? ['health', 'speed', 'star', 'crystal', 'xpgem', 'maxup', 'reveal', 'clair']
+    : ['health', 'speed', 'shield', 'star', 'crystal', 'xpgem', 'maxup', 'reveal', 'grenade', 'cannon', 'scroll', 'charm', 'frost_grenade', 'recall_scroll', 'clair']; // v3.0 +新道具；v3.3 +clair
   const weights = settings.monsterMode === 'none'
-    ? [4, 3, 2, 2, 2, 1, 1, 0, 0]
-    : [3, 2, 2, 2, 1, 2, 1, 1, 1.5, 1.2, 1.0, 0.8, 1.0, 0.9]; // v3.0 新道具低權重
+    ? [4, 3, 2, 2, 2, 1, 1, 0.8]
+    : [3, 2, 2, 2, 1, 2, 1, 1, 1.5, 1.2, 1.0, 0.8, 1.0, 0.9, 0.8]; // v3.0 新道具低權重；v3.3 clair 低權重
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const count = Math.min(2 + Math.floor(Math.random() * 3), candidates.length);
   for (let i = 0; i < count; i++) {
@@ -6632,22 +6766,50 @@ function updateKeyHUD() {
 }
 
 // --- 增益 HUD ---
+// v3.3：增益 HUD——rebuild 僅在作用組合變化時；殘秒由 updateBuffsHUDTick 每 0.1s 更新文字節點
+let _buffsLastSig = '';
+let _buffsTickT = 0;
+function _buffsSignature() {
+  let sig = '';
+  if (buffs.invincible > 0) sig += 'I';
+  if (buffs.speed > 0) sig += 'S';
+  if (shieldActive) sig += 'H';
+  if (buffs.charm) sig += 'C';
+  return sig;
+}
 function updateBuffsHUD() {
-  const container = document.getElementById('buffs-hud');
+  const container = buffsHudEl;
+  if (!container) return;
   let html = '';
   if (buffs.invincible > 0) {
-    html += `<div class="buff-chip" style="border-color:#fd4;color:#fd4;"><span class="buff-icon" style="background:#fd4;"></span>無敵 ${buffs.invincible.toFixed(1)}s</div>`;
+    html += `<div class="buff-chip" data-buff="invincible" style="border-color:#fd4;color:#fd4;"><span class="buff-icon" style="background:#fd4;"></span>無敵 <span class="buff-time">${buffs.invincible.toFixed(1)}</span>s</div>`;
   }
   if (buffs.speed > 0) {
-    html += `<div class="buff-chip" style="border-color:#48f;color:#6af;"><span class="buff-icon" style="background:#48f;"></span>加速 ${buffs.speed.toFixed(1)}s</div>`;
+    html += `<div class="buff-chip" data-buff="speed" style="border-color:#48f;color:#6af;"><span class="buff-icon" style="background:#48f;"></span>加速 <span class="buff-time">${buffs.speed.toFixed(1)}</span>s</div>`;
   }
   if (shieldActive) {
-    html += `<div class="buff-chip" style="border-color:#cdf;color:#cdf;"><span class="buff-icon" style="background:#cdf;"></span>護盾</div>`;
+    html += `<div class="buff-chip" data-buff="shield" style="border-color:#cdf;color:#cdf;"><span class="buff-icon" style="background:#cdf;"></span>護盾</div>`;
   }
   if (buffs.charm) {
-    html += `<div class="buff-chip" style="border-color:#7f8;color:#7f8;"><span class="buff-icon" style="background:#7f8;"></span>護符備用</div>`;
+    html += `<div class="buff-chip" data-buff="charm" style="border-color:#7f8;color:#7f8;"><span class="buff-icon" style="background:#7f8;"></span>護符備用</div>`;
   }
   container.innerHTML = html;
+  _buffsLastSig = _buffsSignature();
+}
+// v3.3：每幀呼叫——組合變化才 rebuild，否則 0.1s 節流更新殘秒文字（不動 innerHTML）
+function updateBuffsHUDTick(dt) {
+  const container = buffsHudEl;
+  if (!container) return;
+  const sig = _buffsSignature();
+  if (sig !== _buffsLastSig) { updateBuffsHUD(); return; }
+  if (sig === '') return;
+  _buffsTickT -= dt;
+  if (_buffsTickT > 0) return;
+  _buffsTickT = 0.1;
+  const invEl = container.querySelector('[data-buff="invincible"] .buff-time');
+  if (invEl) invEl.textContent = buffs.invincible.toFixed(1);
+  const spdEl = container.querySelector('[data-buff="speed"] .buff-time');
+  if (spdEl) spdEl.textContent = buffs.speed.toFixed(1);
 }
 
 // --- 等級 / XP HUD ---
@@ -6710,17 +6872,33 @@ function updateAmmoHUD() {
 }
 
 // --- Boss HP 條 HUD ---
+// v3.3：updateBossHUD 狀態快取——僅在有 Boss↔無 Boss、血量跨 1% 閾時寫 DOM，避免每幀 layout
+let _bossHudActive = false;
+let _bossHudLastPct = -1;
 function updateBossHUD() {
-  const el = document.getElementById('boss-hud');
+  const el = bossHudEl;
   if (!el) return;
-  if (bossRef && bossRef.state !== 'dead') {
-    el.style.display = 'block';
-    document.body.classList.add('boss-active');
+  const hasBoss = !!(bossRef && bossRef.state !== 'dead');
+  if (hasBoss) {
     const pct = Math.max(0, bossRef.hp / bossRef.maxHp);
-    document.getElementById('boss-bar-inner').style.width = (pct * 100) + '%';
+    const pctBucket = Math.round(pct * 100);
+    if (!_bossHudActive) {
+      el.style.display = 'block';
+      document.body.classList.add('boss-active');
+      _bossHudActive = true;
+      _bossHudLastPct = -1; // 新 Boss 強制重寫一次寬度
+    }
+    if (pctBucket !== _bossHudLastPct && bossBarInnerEl) {
+      bossBarInnerEl.style.width = (pct * 100) + '%';
+      _bossHudLastPct = pctBucket;
+    }
   } else {
-    el.style.display = 'none';
-    document.body.classList.remove('boss-active');
+    if (_bossHudActive) {
+      el.style.display = 'none';
+      document.body.classList.remove('boss-active');
+      _bossHudActive = false;
+      _bossHudLastPct = -1;
+    }
   }
 }
 
@@ -6809,6 +6987,7 @@ function damagePlayer(amount, cause) {
   player.hp -= amount;
   runDamaged = true;
   damageFlash = 0.4;
+  triggerDamageDirection(); // v3.3：記錄受擊方向，觸發邊緣弧形暗角
   // Boss 戰進行中且真的扣血 → 記錄（用於「毫髮無傷擊殺 Boss」成就判定）
   if (bossRef && bossRef.state !== 'dead') bossHitTaken = true;
   playPlayerHurt();
@@ -7688,6 +7867,18 @@ function passableNeighbor(cx, cy, d) {
   return ny * MAP_W + nx;
 }
 
+// v3.3：回傳 (cx,cy) 所在傳送墊的另一端格索引（非傳送墊回傳 -1）。
+// teleporters 數量小（通常 0-4 個），每次展開比對幾次即可。
+// 與 generateGems BFS 的傳送通道建模對稱，確保 runtime findPathRaw 能找到密室寶石。
+function teleporterOtherIdx(cx, cy) {
+  for (let i = 0; i < teleporters.length; i++) {
+    const tp = teleporters[i];
+    if (cx === tp.ax && cy === tp.ay) return tp.by * MAP_W + tp.bx;
+    if (cx === tp.bx && cy === tp.by) return tp.ay * MAP_W + tp.ax;
+  }
+  return -1;
+}
+
 // 統一尋路入口：回傳 { path:[{x,y}...], visited, ms }（未平滑）
 // algo: astar | bfs | dfs | greedy
 // v2.4：模組層預配置最大尺寸（無邊迷宮 89×89=7921 格）尋路緩衝。
@@ -7781,6 +7972,20 @@ function findPathRaw(startX, startY, endX, endY, algo) {
           heapPush(nIdx);
         }
       }
+      // v3.3：傳送點通道——抵達一端，另一端視為可達（成本 1 步）
+      const tpO = teleporterOtherIdx(cx, cy);
+      if (tpO >= 0 && !closed[tpO]) {
+        const tox = tpO % W, toy = (tpO / W) | 0;
+        if (cellPassable(tox, toy)) {
+          const tg2 = algo === 'greedy' ? 0 : curG + 1;
+          if (tg2 < gScore[tpO]) {
+            gScore[tpO] = tg2;
+            parent[tpO] = cur;
+            openF[tpO] = algo === 'greedy' ? h(tox, toy) : tg2 + h(tox, toy);
+            heapPush(tpO);
+          }
+        }
+      }
     }
     return { path: null, visited, ms: performance.now() - t0 };
   }
@@ -7804,6 +8009,14 @@ function findPathRaw(startX, startY, endX, endY, algo) {
         if (seen[nIdx] || !cellPassable(nx, ny)) continue;
         seen[nIdx] = 1; parent[nIdx] = cur; queue[qTail++] = nIdx;
       }
+      // v3.3：傳送點通道——抵達一端，另一端標記可達並入隊
+      const tpO = teleporterOtherIdx(cx, cy);
+      if (tpO >= 0 && !seen[tpO]) {
+        const tox = tpO % W, toy = (tpO / W) | 0;
+        if (cellPassable(tox, toy)) {
+          seen[tpO] = 1; parent[tpO] = cur; queue[qTail++] = tpO;
+        }
+      }
     }
     return { path: null, visited, ms: performance.now() - t0 };
   }
@@ -7820,6 +8033,14 @@ function findPathRaw(startX, startY, endX, endY, algo) {
         const nIdx = passableNeighbor(cx, cy, d);
         if (nIdx < 0 || seen[nIdx]) continue;
         seen[nIdx] = 1; parent[nIdx] = cur; stack.push(nIdx);
+      }
+      // v3.3：傳送點通道——抵達一端，另一端推入堆疊
+      const tpO = teleporterOtherIdx(cx, cy);
+      if (tpO >= 0 && !seen[tpO]) {
+        const tox = tpO % W, toy = (tpO / W) | 0;
+        if (cellPassable(tox, toy)) {
+          seen[tpO] = 1; parent[tpO] = cur; stack.push(tpO);
+        }
       }
     }
     return { path: null, visited, ms: performance.now() - t0 };
@@ -8023,6 +8244,8 @@ function planNextAutoTarget(skipSmooth) {
     info.style.display = 'block';
     return true;
   } finally {
+    // v3.3：無論 early-return 或異常，pfIgnoreEnd/pfAutoDoors 必復位，避免汙染後續尋路
+    pfIgnoreEnd = false;
     pfAutoDoors = false;
   }
 }
@@ -8465,6 +8688,7 @@ function update(dt) {
   // 地圖卷軸 / 閃電揭露倒數
   if (revealTimer > 0) revealTimer -= dt;
   if (lightningRevealT > 0) lightningRevealT -= dt;
+  if (clairTimer > 0) clairTimer -= dt; // v3.3：透視藥水倒數
   // 連擊 HUD：comboCount>=2 顯示，歸零隱藏
   updateComboHUD();
   // 低血心跳：HP<30% 且未暫停時約每秒一次，音量隨缺血量
@@ -8695,6 +8919,8 @@ function checkGemCollect() {
     if (d < 0.5) {
       gem.collected = true;
       gemsCollected++;
+      // v3.3：寶石雷達——單局收集 20 顆
+      if (gemsCollected >= 20) unlockAchievement('gem_scout');
       spawnGemBurst(gem);
       playCollect();
       updateGemHUD();
@@ -9179,7 +9405,7 @@ function checkItems() {
       it.collected = true;
       applyItem(it.type);
       playItemPickup(it.type);
-      const colMap = { health: [255,80,80], speed: [80,160,255], shield: [200,220,255], star: [255,220,80], crystal: [80,200,255], xpgem: [255,215,60], maxup: [255,60,120], reveal: [200,120,255], grenade: [255,140,40], cannon: [255,70,70], scroll: [220,200,255], charm: [120,255,180] };
+      const colMap = { health: [255,80,80], speed: [80,160,255], shield: [200,220,255], star: [255,220,80], crystal: [80,200,255], xpgem: [255,215,60], maxup: [255,60,120], reveal: [200,120,255], grenade: [255,140,40], cannon: [255,70,70], scroll: [220,200,255], charm: [120,255,180], clair: [120,255,200] };
       spawnParticle(it.x, it.y, 0.5, 0, 0, 1.2, 0.5, colMap[it.type] || [255,255,255], 2);
       runItemTypes.add(it.type);
       stats.totalItemsPicked++;
@@ -9231,6 +9457,16 @@ function applyItem(type) {
   } else if (type === 'reveal') {
     revealTimer = 10;   // 小地圖短暫揭露所有敵人
     showToast('地圖卷軸：敵人位置顯示 10 秒！');
+  } else if (type === 'clair') {
+    // v3.3：透視藥水——8 秒內小地圖標示未收集寶石位置（不分難度）
+    clairTimer = 8;
+    runUsedItems.add('clair');
+    stats.clairUsed = (stats.clairUsed || 0) + 1;
+    setAchProgress('clair_10', stats.clairUsed);
+    unlockAchievement('clair_first');
+    if (stats.clairUsed >= 10) unlockAchievement('clair_10');
+    saveStats();
+    showToast('透視藥水：未收集寶石位置顯示 8 秒！');
   } else if (type === 'scroll') {
     // v2.5：閃電卷軸——拾取即施放，半徑 5 格內所有敵人 80 傷害＋0.5 秒硬直
     castLightning();
@@ -9326,6 +9562,8 @@ function loop(now) {
   renderMinimap();
   updatePostFX();
   updateBossHUD();
+  updateDamageDir(dt); // v3.3：傷害方向弧形暗角衰減
+  updateBuffsHUDTick(dt); // v3.3：增益殘秒 0.1s 節流更新
 
     // 計時器更新（暫停與勝利時凍結）
     if (!paused && !gameWon) {
@@ -9348,10 +9586,10 @@ function loop(now) {
       let relAngle = angleToEnd - player.dir;
       while (relAngle > Math.PI) relAngle -= Math.PI * 2;
       while (relAngle < -Math.PI) relAngle += Math.PI * 2;
-      const arrow = document.getElementById('exit-arrow');
-      arrow.style.transform = `rotate(${relAngle}rad)`;
-      arrow.classList.toggle('close', dist < 6);
-      document.getElementById('exit-dist').textContent = dist.toFixed(1) + 'm';
+      // v3.3：使用模組層快取參照，避免每幀 getElementById
+      exitArrowEl.style.transform = `rotate(${relAngle}rad)`;
+      exitArrowEl.classList.toggle('close', dist < 6);
+      exitDistEl.textContent = dist.toFixed(1) + 'm';
     }
   }
   frameCount++;
@@ -9369,7 +9607,7 @@ function loop(now) {
 
 // --- 後處理效果（Canvas 覆蓋層色偏） ---
 function updatePostFX() {
-  const el = document.getElementById('postfx-overlay');
+  const el = postfxOverlayEl; // v3.3：模組層快取
   if (!el) return;
   // 上帝視角下關閉後處理色偏，保持地圖可讀性
   if (godView) { el.style.opacity = 0; return; }
@@ -9460,7 +9698,15 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 // A6：視窗失焦或分頁隱藏時清空按鍵，避免按鍵卡住
 window.addEventListener('blur', () => { clearKeys(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden) clearKeys(); });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) return;
+  clearKeys();
+  // v3.3：分頁自動暫停——遊戲進行中且非上帝視角/編輯器時自動暫停，回來由玩家手動 resume
+  if (gameStarted && !paused && !gameWon && !playerDead && !godView) {
+    const editorOpen = (typeof editorScreen !== 'undefined' && editorScreen && editorScreen.style.display !== 'none');
+    if (!editorOpen) pauseGame();
+  }
+});
 
 // --- 滑鼠 (桌面) ---
 function safeRequestPointerLock() {
@@ -9673,10 +9919,14 @@ function showWinScreen() {
     newRecord = true;
   }
   const best = Math.min(prevBest ?? gameElapsed, gameElapsed);
+  // v3.3：每日迷宮連續打卡——先計算連續天數（測試模式不寫入）
+  let dailyStreakShown = 0;
+  if (!testMode && settings.dailyMode) dailyStreakShown = recordDailyStreakWin();
   let html = `用時 <span>${formatTime(gameElapsed)}</span><br>`;
   html += `最佳紀錄 <span>${formatTime(best)}</span><br>`;
   html += `等級 <span style="color:#6fd;">Lv.${runXP.level}</span>　擊殺 <span style="color:#fa5;">${runKills}</span>　寶石 <span style="color:#4ff;">${gemsCollected}/${gemsTotal}</span><br>`;
   html += newRecord ? '<span style="color:#fc0;">新紀錄！</span><br>' : '';
+  if (dailyStreakShown > 0) html += `<span style="color:#6f8;">連續打卡 ${dailyStreakShown} 天</span><br>`;
   html += '找到迷宮出口！';
   winStats.innerHTML = html;
   winScreen.style.display = 'flex';
@@ -9732,6 +9982,9 @@ function showWinScreen() {
       stats.dailyWins = (stats.dailyWins || 0) + 1;
       unlockAchievement('daily_win');
       if (stats.dailyWins >= 3) unlockAchievement('daily_3');
+      // v3.3：連續打卡成就
+      if (dailyStreakShown >= 3) unlockAchievement('daily_streak3');
+      if (dailyStreakShown >= 7) unlockAchievement('daily_streak7');
     }
     // 記錄最高等級
     stats.highestLevel = Math.max(stats.highestLevel || 1, highestLevelEver);
@@ -9822,6 +10075,7 @@ function resetGameState() {
   document.body.classList.remove('crouching');
   revealTimer = 0;
   lightningRevealT = 0;
+  clairTimer = 0; // v3.3：透視藥水每局重置
   pendingReplann = false;
   lastReplannTime = 0;
   shootCooldown = 0;
@@ -10372,10 +10626,11 @@ function updateEditorStats() {
     for (let y = 0; y < editor.rows; y++)
       for (let x = 0; x < editor.cols; x++)
         if (editor.map[y][x] === TILE_DOOR) doorCount++;
-    const keyCount = ents.filter(e => e.type === 'key').length;
+    // v3.3：改名 editorKeyCount，避免遮蔽全域遊戲 keyCount（已收集鑰匙數）
+    const editorKeyCount = ents.filter(e => e.type === 'key').length;
     const teleCount = ents.filter(e => e.type === 'tele').length;
     let warn = '';
-    if (doorCount > keyCount) warn += `　<span style="color:#f66;">警告：鎖門 ${doorCount} 個但鑰匙僅 ${keyCount} 把</span>`;
+    if (doorCount > editorKeyCount) warn += `　<span style="color:#f66;">警告：鎖門 ${doorCount} 個但鑰匙僅 ${editorKeyCount} 把</span>`;
     if (teleCount % 2 === 1) warn += `　<span style="color:#f66;">警告：傳送點 ${teleCount} 個（奇數，無法成對）</span>`;
     el.innerHTML = `牆 ${walls}｜空地 ${empty}｜起訖距離 ${dist}｜實體 ${entCount}｜可達：${reach}${warn}`;
   } catch (e) {
@@ -11492,9 +11747,14 @@ function promptSaveSlot() {
       const n = parseInt(btn.dataset.n, 10);
       const act = btn.dataset.act;
       if (act === 'save') {
-        // UB-I：覆寫已有地圖的存檔槽前先確認
+        // UB-I / v3.3：覆寫已有地圖的存檔槽前先確認，並顯示舊檔資訊
         const existing = loadSaveSlots()['slot' + n];
-        if (existing && !confirm('覆寫存檔槽 ' + n + ' ？')) return;
+        if (existing) {
+          const oldName = existing.name || ('存檔槽 ' + n);
+          const oldSize = (existing.cols && existing.rows) ? (existing.cols + 'x' + existing.rows) : '?x?';
+          const oldDate = existing.savedAt ? new Date(existing.savedAt).toLocaleString('zh-TW') : '未知日期';
+          if (!confirm('即將覆寫存檔槽 ' + n + '？\n舊檔：' + oldName + '（' + oldSize + '，' + oldDate + '）\n此動作無法復原。')) return;
+        }
         saveToSlot(n); closeEditorModal();
       }
       else if (act === 'load') { loadFromSlot(n); closeEditorModal(); }
@@ -12172,6 +12432,12 @@ const ACH_DEFS = [
   { id: 'hardcore_win',      name: '一命大師', desc: '一命模式通關', icon: '命', target: 1, rarity: 'extreme' },
   { id: 'daily_win',         name: '每日勇士', desc: '每日迷宮通關 1 次', icon: '日', target: 1, rarity: 'normal' },
   { id: 'daily_3',           name: '每日達人', desc: '每日迷宮通關 3 次', icon: '達', target: 3, rarity: 'hard' },
+  // === v3.3 新成就（5 項，ACH_DEFS 66→71） ===
+  { id: 'clair_first',       name: '透視初階', desc: '首次使用透視藥水', icon: '透', rarity: 'normal' },
+  { id: 'clair_10',          name: '透視大師', desc: '累計使用透視藥水 10 次', icon: '透', target: 10, rarity: 'normal' },
+  { id: 'daily_streak3',     name: '三日打卡', desc: '每日迷宮連續完成 3 天', icon: '三', target: 3, rarity: 'normal' },
+  { id: 'daily_streak7',     name: '週年打卡', desc: '每日迷宮連續完成 7 天', icon: '週', target: 7, rarity: 'hard' },
+  { id: 'gem_scout',         name: '寶石雷達', desc: '單局收集 20 顆寶石', icon: '寶', target: 20, rarity: 'normal' },
 ];
 
 let achievements = {};
@@ -13172,6 +13438,8 @@ setTimeout(() => {
 //  UC5：主選單資訊列（版本 / 最佳時間 / 成就進度）
 // ============================================================
 function updateStartInfo() {
+  const verEl = document.getElementById('start-version');
+  if (verEl) verEl.textContent = GAME_VERSION; // v3.3：引用常數
   const bestEl = document.getElementById('start-best-time');
   const achEl = document.getElementById('start-ach-count');
   if (bestEl) {
