@@ -6180,6 +6180,40 @@ function generateGems() {
   }
   gemsTotal = gems.length;
   gemsGenerated = true;
+  // v3.2：可達性驗證——把終點當牆，從起點 BFS；不經過終點就到不了的寶石直接丟掉。
+  // 避免 AI 必須先穿過終點（誤觸發通關）才能收集某些寶石。
+  {
+    pfAutoDoors = true; // 門算可走（自動遊玩會開門）
+    pfIgnoreEnd = true;
+    const sx = Math.floor(START.x), sy = Math.floor(START.y);
+    const visited = new Uint8Array(MAP_W * MAP_H);
+    const qH = [sy * MAP_W + sx];
+    visited[sy * MAP_W + sx] = 1;
+    while (qH.length) {
+      const c = qH.shift();
+      const cx = c % MAP_W, cy = (c / MAP_W) | 0;
+      // v3.2：傳送點視為通道——抵達一端，另一端也標記可達
+      for (const tp of teleporters) {
+        if (cx === tp.ax && cy === tp.ay) {
+          const k2 = tp.by * MAP_W + tp.bx;
+          if (!visited[k2]) { visited[k2] = 1; qH.push(k2); }
+        } else if (cx === tp.bx && cy === tp.by) {
+          const k2 = tp.ay * MAP_W + tp.ax;
+          if (!visited[k2]) { visited[k2] = 1; qH.push(k2); }
+        }
+      }
+      for (let d = 0; d < 8; d++) {
+        const n = passableNeighbor(cx, cy, d);
+        if (n < 0 || visited[n]) continue;
+        visited[n] = 1;
+        qH.push(n);
+      }
+    }
+    gems = gems.filter(g => visited[Math.floor(g.y) * MAP_W + Math.floor(g.x)] === 1);
+    gemsTotal = gems.length;
+    pfIgnoreEnd = false;
+    pfAutoDoors = false;
+  }
   updateGemHUD();
 }
 
@@ -7635,14 +7669,21 @@ const NEI_DX = [0, 0, -1, 1, -1, 1, -1, 1];
 const NEI_DY = [-1, 1, 0, 0, -1, -1, 1, 1];
 // 自動遊玩尋路時視鎖門為可行走（自動遊玩靠近門即自動開門，無需鑰匙）
 let pfAutoDoors = false;
+let pfIgnoreEnd = false; // v3.2：收集寶石階段把終點視為牆，避免尋路穿過終點誤觸發通關
+// v3.2：統一格子可走判定。pfIgnoreEnd=true 時終點格視為牆（收集寶石用）。
+function cellPassable(x, y) {
+  if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
+  if (pfIgnoreEnd && x === Math.floor(END.x) && y === Math.floor(END.y)) return false;
+  const v = MAP[y][x];
+  return isWalkable(v) || (pfAutoDoors && v === TILE_DOOR);
+}
 function passableNeighbor(cx, cy, d) {
-  const walk = v => isWalkable(v) || (pfAutoDoors && v === TILE_DOOR);
   const nx = cx + NEI_DX[d], ny = cy + NEI_DY[d];
   if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return -1;
-  if (!walk(MAP[ny][nx])) return -1;
+  if (!cellPassable(nx, ny)) return -1;
   if (NEI_DX[d] !== 0 && NEI_DY[d] !== 0) {
-    if (!walk(MAP[cy + NEI_DY[d]][cx])) return -1;
-    if (!walk(MAP[cy][cx + NEI_DX[d]])) return -1;
+    if (!cellPassable(cx + NEI_DX[d], cy)) return -1;
+    if (!cellPassable(cx, cy + NEI_DY[d])) return -1;
   }
   return ny * MAP_W + nx;
 }
@@ -7665,9 +7706,8 @@ function findPathRaw(startX, startY, endX, endY, algo) {
   const W = MAP_W, H = MAP_H, size = W * H;
   const startIdx = sy * W + sx, endIdx = ey * W + ex;
   const t0 = performance.now();
-  const walk = v => isWalkable(v) || (pfAutoDoors && v === TILE_DOOR);
   if (sx < 0 || sy < 0 || sx >= W || sy >= H) return { path: null, visited: 0, ms: 0 };
-  if (!walk(mapAt(ex, ey))) return { path: null, visited: 0, ms: 0 };
+  if (!cellPassable(ex, ey)) return { path: null, visited: 0, ms: 0 };
   if (startIdx === endIdx) return { path: [{x: ex, y: ey}], visited: 1, ms: 0 };
 
   // parent：重用模組層緩衝，並只 fill 本次地圖大小範圍
@@ -7761,7 +7801,7 @@ function findPathRaw(startX, startY, endX, endY, algo) {
         const nx = cx + dx, ny = cy + dy;
         if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
         const nIdx = ny * W + nx;
-        if (seen[nIdx] || !walk(MAP[ny][nx])) continue;
+        if (seen[nIdx] || !cellPassable(nx, ny)) continue;
         seen[nIdx] = 1; parent[nIdx] = cur; queue[qTail++] = nIdx;
       }
     }
@@ -7864,7 +7904,6 @@ function segmentHasLOS(x0, y0, x1, y1) {
 // 取樣步長 0.04、邊距 +0.03，確保涵蓋玩家實際碰撞半徑（0.2）
 function hasClearCorridor(p1, p2) {
   if (!hasLineOfSight(p1, p2)) return false;
-  const walk = v => isWalkable(v) || (pfAutoDoors && v === TILE_DOOR);
   const r = player.radius + 0.03; // 略微加寬，預留移動容差
   const x0 = p1.x + 0.5, y0 = p1.y + 0.5;
   const x1 = p2.x + 0.5, y1 = p2.y + 0.5;
@@ -7874,10 +7913,10 @@ function hasClearCorridor(p1, p2) {
     const t = i / steps;
     const px = x0 + (x1 - x0) * t;
     const py = y0 + (y1 - y0) * t;
-    if (!walk(mapAt(Math.floor(px - r), Math.floor(py - r))) ||
-        !walk(mapAt(Math.floor(px + r), Math.floor(py - r))) ||
-        !walk(mapAt(Math.floor(px - r), Math.floor(py + r))) ||
-        !walk(mapAt(Math.floor(px + r), Math.floor(py + r)))) return false;
+    if (!cellPassable(Math.floor(px - r), Math.floor(py - r)) ||
+        !cellPassable(Math.floor(px + r), Math.floor(py - r)) ||
+        !cellPassable(Math.floor(px - r), Math.floor(py + r)) ||
+        !cellPassable(Math.floor(px + r), Math.floor(py + r))) return false;
   }
   return true;
 }
@@ -7922,8 +7961,17 @@ function planNextAutoTarget(skipSmooth) {
     const candidates = gemsList.slice(0, Math.min(isHuge ? 2 : 4, gemsList.length));
     const t0 = performance.now();
     let target = null, raw = null, bestScore = Infinity;
+    // v3.2：玩家到寶石的路徑把終點當牆（不穿過終點），避免路徑穿過終點誤觸發通關。
+    // 寶石到終點的 score 與 fallback 到終點的路徑正常（目標就是終點）。
+    pfIgnoreEnd = true;
+    const r1For = new Map();
     for (const g of candidates) {
       const r1 = findPathRaw(player.x, player.y, g.x, g.y, pathfindAlgo);
+      r1For.set(g, r1);
+    }
+    pfIgnoreEnd = false;
+    for (const g of candidates) {
+      const r1 = r1For.get(g);
       if (!r1.path) continue;
       const r2 = findPathRaw(g.x, g.y, END.x, END.y, pathfindAlgo);
       const score = r1.path.length + (r2.path ? r2.path.length : 1e6);
@@ -7931,9 +7979,14 @@ function planNextAutoTarget(skipSmooth) {
     }
     // v3.1：前 N 候選都找不到路徑時，擴大搜尋所有未收集寶石，不要直接放棄去終點。
     if (!target && gemsList.length > candidates.length) {
+      pfIgnoreEnd = true;
+      const r1All = new Map();
       for (const g of gemsList) {
         if (candidates.indexOf(g) !== -1) continue;
-        const r1 = findPathRaw(player.x, player.y, g.x, g.y, pathfindAlgo);
+        r1All.set(g, findPathRaw(player.x, player.y, g.x, g.y, pathfindAlgo));
+      }
+      pfIgnoreEnd = false;
+      for (const [g, r1] of r1All) {
         if (!r1.path) continue;
         const r2 = findPathRaw(g.x, g.y, END.x, END.y, pathfindAlgo);
         const score = r1.path.length + (r2.path ? r2.path.length : 1e6);
