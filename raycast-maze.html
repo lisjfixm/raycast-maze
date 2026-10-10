@@ -7903,7 +7903,17 @@ function planNextAutoTarget(skipSmooth) {
     // 依直線距離排序未收集寶石；候選評估「到寶石路徑 + 寶石到終點路徑」的總長，
     // 選總路徑最短的寶石（避免先拿近但繞遠的寶石，導致整體路線更長）
     // v2.8：排除連續卡住升級黑名單中的格（過濾後為空則落到下方 END 分支）
-    const gemsList = gems.filter(g => !g.collected && !autoAvoidGems.has(Math.floor(g.y) * MAP_W + Math.floor(g.x))).sort((a, b) => {
+    // v3.1：黑名單可能是暫時路徑問題而非真的不可達；若未黑名單寶石已清空，
+    //        清空黑名單重試一次，避免 AI 放棄寶石直接衝終點。
+    let gemsList = gems.filter(g => !g.collected && !autoAvoidGems.has(Math.floor(g.y) * MAP_W + Math.floor(g.x)));
+    if (gemsList.length === 0) {
+      const retryable = gems.filter(g => !g.collected);
+      if (retryable.length > 0) {
+        autoAvoidGems.clear();
+        gemsList = retryable;
+      }
+    }
+    gemsList.sort((a, b) => {
       const da = (player.x - a.x) ** 2 + (player.y - a.y) ** 2;
       const db = (player.x - b.x) ** 2 + (player.y - b.y) ** 2;
       return da - db;
@@ -7918,6 +7928,17 @@ function planNextAutoTarget(skipSmooth) {
       const r2 = findPathRaw(g.x, g.y, END.x, END.y, pathfindAlgo);
       const score = r1.path.length + (r2.path ? r2.path.length : 1e6);
       if (score < bestScore) { bestScore = score; target = g; raw = r1; }
+    }
+    // v3.1：前 N 候選都找不到路徑時，擴大搜尋所有未收集寶石，不要直接放棄去終點。
+    if (!target && gemsList.length > candidates.length) {
+      for (const g of gemsList) {
+        if (candidates.indexOf(g) !== -1) continue;
+        const r1 = findPathRaw(player.x, player.y, g.x, g.y, pathfindAlgo);
+        if (!r1.path) continue;
+        const r2 = findPathRaw(g.x, g.y, END.x, END.y, pathfindAlgo);
+        const score = r1.path.length + (r2.path ? r2.path.length : 1e6);
+        if (score < bestScore) { bestScore = score; target = g; raw = r1; }
+      }
     }
     if (!target) {
       target = END;
@@ -8467,6 +8488,12 @@ function update(dt) {
       // 勝利判定
       const distToEnd = Math.sqrt((player.x - END.x) ** 2 + (player.y - END.y) ** 2);
       if (distToEnd < 0.6) {
+        // v3.1：若還有未收集寶石，先去收寶石而非直接通關。
+        // 全部黑名單/不可達的寶石才放棄（planNextAutoTarget 內已會清空黑名單重試）。
+        const gemsLeft = gems.some(g => !g.collected);
+        if (gemsLeft && planNextAutoTarget(true)) {
+          return; // 還有寶石要收，重新規劃路徑
+        }
         gameWon = true;
         playWin();
         wonByAuto = true;
