@@ -95,6 +95,13 @@
     --btn-pad-y: var(--sp-2);
     --btn-pad-x: var(--sp-3);
 
+    /* 元件：次要按鈕（v4.0 U2 統一 outline，用於返回/輔助動作） */
+    --btn-secondary-bg: var(--c-primary-dim);
+    --btn-secondary-border: var(--c-primary);
+    --btn-secondary-color: var(--c-primary-text);
+    --btn-secondary-hover-bg: rgba(68,170,255,0.25);
+    --btn-secondary-hover-color: #fff;
+
     /* 元件：輸入 / 下拉 */
     --input-bg: rgba(255,255,255,0.08);
     --input-border: #555;
@@ -193,7 +200,7 @@
     background: rgba(170,68,255,0.3);
     border: 1px solid #a4f;
     padding: 4px 14px;
-    border-radius: 4px;
+    border-radius: var(--rd-xs);
     font-size: 12px;
     color: #d9f;
     z-index: 10;
@@ -288,7 +295,7 @@
     top: -6px; right: -6px;
     background: #e44;
     color: #fff;
-    border-radius: 9px;
+    border-radius: var(--rd-md);
     font-size: 11px;
     font-weight: 700;
     min-width: 16px;
@@ -318,7 +325,7 @@
     max-width: 92vw;
     max-height: 86vh;
     border: 2px solid rgba(255,120,60,0.7);
-    border-radius: 6px;
+    border-radius: var(--rd-sm);
     background: #0a0e18;
     cursor: crosshair;
   }
@@ -420,7 +427,7 @@
     padding: 14px 44px;
     font-size: 17px;
     font-family: inherit;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     cursor: pointer;
     letter-spacing: 3px;
     transition: transform 0.15s, box-shadow 0.15s;
@@ -488,7 +495,7 @@
     border: 1px solid #555;
     color: #ddd;
     padding: 7px 14px;
-    border-radius: 5px;
+    border-radius: var(--rd-sm);
     font-family: inherit;
     font-size: 13px;
     cursor: pointer;
@@ -508,7 +515,7 @@
     justify-content: center;
     overflow: auto;
     background: #08080e;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     border: 1px solid #222;
     min-height: 0;
   }
@@ -528,7 +535,7 @@
   .mode-toggle {
     display: inline-flex;
     border: 1px solid #555;
-    border-radius: 6px;
+    border-radius: var(--rd-sm);
     overflow: hidden;
   }
   .mode-toggle button {
@@ -573,7 +580,7 @@
     right: 14px; bottom: 46px;
     width: 220px; height: 165px;
     border: 2px solid #4af;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     overflow: hidden;
     box-shadow: 0 0 20px rgba(68,170,255,0.4);
     z-index: 5;
@@ -600,7 +607,7 @@
   .io-panel {
     background: #14141f;
     border: 1px solid #4af;
-    border-radius: 10px;
+    border-radius: var(--rd-lg);
     padding: 18px;
     width: min(560px, 90vw);
     max-height: 80vh;
@@ -611,14 +618,14 @@
   .io-panel textarea {
     width: 100%; flex: 1; min-height: 200px;
     background: #0a0a12; color: #9f9;
-    border: 1px solid #444; border-radius: 6px;
+    border: 1px solid #444; border-radius: var(--rd-sm);
     font-family: monospace; font-size: 11px;
     padding: 8px; resize: vertical;
   }
   .io-btns { display: flex; gap: 8px; justify-content: flex-end; }
   .io-btns button {
     background: rgba(68,170,255,0.15); border: 1px solid #4af;
-    color: #cdf; padding: 7px 16px; border-radius: 5px;
+    color: #cdf; padding: 7px 16px; border-radius: var(--rd-sm);
     font-family: inherit; cursor: pointer;
   }
   #io-msg { font-size: 12px; color: #f86; min-height: 16px; }
@@ -637,7 +644,7 @@
   .em-tpl-btn, .em-slot-row {
     background: rgba(68,170,255,0.1);
     border: 1px solid #4af;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     padding: 12px;
     color: #cdf;
     font-family: inherit;
@@ -654,7 +661,7 @@
   .em-slot-actions { display: flex; gap: 6px; }
   .em-slot-actions button {
     background: rgba(68,170,255,0.15); border: 1px solid #4af;
-    color: #cdf; padding: 5px 10px; border-radius: 5px;
+    color: #cdf; padding: 5px 10px; border-radius: var(--rd-sm);
     font-family: inherit; font-size: 12px; cursor: pointer;
   }
   .em-slot-actions button.danger { border-color: #f55; color: #faa; background: rgba(255,80,80,0.12); }
@@ -670,14 +677,14 @@
   #editor-props {
     position: absolute; left: 14px; bottom: 46px;
     background: rgba(0,0,0,0.7); border: 1px solid #fb4;
-    border-radius: 6px; padding: 8px 12px;
+    border-radius: var(--rd-sm); padding: 8px 12px;
     font-size: 12px; color: #fd8; display: none; z-index: 5;
     max-width: 220px; line-height: 1.6;
   }
   #editor-props.on { display: block; }
   #editor-props select {
     background: #222; color: #ddd; border: 1px solid #555;
-    border-radius: 4px; padding: 2px 6px; font-family: inherit;
+    border-radius: var(--rd-xs); padding: 2px 6px; font-family: inherit;
   }
 
   /* ===== 自動遊玩：演算法工具列 ===== */
@@ -690,7 +697,7 @@
     gap: 4px;
     z-index: 10;
     background: rgba(0,0,0,0.55);
-    padding: 4px; border-radius: 6px;
+    padding: 4px; border-radius: var(--rd-sm);
     border: 1px solid #65a;
   }
   #algo-bar.on { display: flex; }
@@ -699,7 +706,7 @@
     border: 1px solid #555;
     color: #999;
     font-family: inherit; font-size: 11px;
-    padding: 4px 9px; border-radius: 4px; cursor: pointer;
+    padding: 4px 9px; border-radius: var(--rd-xs); cursor: pointer;
   }
   #algo-bar button.active { color: #fff; font-weight: bold; }
   #algo-bar button[data-algo="astar"].active { background: rgba(170,68,255,0.4); border-color: #a4f; }
@@ -715,7 +722,7 @@
     z-index: 10;
     background: rgba(0,0,0,0.7);
     border: 1px solid #65a;
-    border-radius: 6px;
+    border-radius: var(--rd-sm);
     padding: 8px 10px;
     font-size: 11px;
     color: #ccc;
@@ -725,7 +732,7 @@
   }
   #algo-compare.on { display: block; }
   #algo-compare .row { display: flex; align-items: center; gap: 6px; }
-  #algo-compare .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  #algo-compare .swatch { width: 10px; height: 10px; border-radius: var(--rd-xs); display: inline-block; }
 
   /* 測試模式：返回編輯器按鈕 */
   #back-to-editor-btn {
@@ -737,7 +744,7 @@
     background: rgba(80,200,120,0.2);
     border: 1px solid #4f8;
     color: #9f9;
-    padding: 6px 12px; border-radius: 6px;
+    padding: 6px 12px; border-radius: var(--rd-sm);
     font-family: inherit; font-size: 12px; cursor: pointer;
   }
   #back-to-editor-btn.on { display: block; }
@@ -874,10 +881,10 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    bottom: calc(10px + env(safe-area-inset-bottom));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     background: rgba(0,0,0,0.55);
     border: 1px solid rgba(68,170,255,0.3);
-    border-radius: 20px;
+    border-radius: var(--rd-xl);
     padding: 6px 16px;
     z-index: 20;
     display: none;
@@ -965,7 +972,7 @@
     gap: 10px;
     background: rgba(15,20,35,0.9);
     border: 1px solid #3a4a6a;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     padding: 6px 12px;
     user-select: none;
   }
@@ -1009,9 +1016,9 @@
     width: 220px;
     margin: 8px auto;
     padding: 11px 0;
-    background: var(--c-primary-dim);
-    border: 1px solid var(--c-primary);
-    color: var(--c-primary-text);
+    background: var(--btn-secondary-bg);
+    border: 1px solid var(--btn-secondary-border);
+    color: var(--btn-secondary-color);
     font-family: inherit;
     font-size: var(--fs-lg);
     border-radius: var(--rd-sm);
@@ -1019,7 +1026,7 @@
     letter-spacing: 2px;
     transition: all 0.15s;
   }
-  .pause-btn:hover { background: rgba(68,170,255,0.25); color: #fff; }
+  .pause-btn:hover { background: var(--btn-secondary-hover-bg); color: var(--btn-secondary-hover-color); }
   .pause-btn:active { transform: scale(0.97); }
   .pause-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   .pause-btn.primary {
@@ -1028,9 +1035,9 @@
     font-weight: bold;
   }
   .pause-btn.danger {
-    border-color: var(--c-purple);
-    background: rgba(170,68,255,0.12);
-    color: var(--c-purple-text);
+    border-color: var(--btn-secondary-border);
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-color);
   }
 
   /* ===== 設定面板 ===== */
@@ -1081,7 +1088,7 @@
     top: calc(10px + env(safe-area-inset-top));
     right: calc(160px + env(safe-area-inset-right));
     bottom: auto;
-    width: 44px; height: 44px;
+    width: 48px; height: 48px;
   }
   body.is-mobile #btn-pause { display: flex; top: calc(128px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); left: auto; }
   .pause-icon {
@@ -1094,7 +1101,7 @@
     position: absolute;
     top: 0; width: 4px; height: 100%;
     background: currentColor;
-    border-radius: 1px;
+    border-radius: var(--rd-xs);
   }
   .pause-icon::before { left: 0; }
   .pause-icon::after { right: 0; }
@@ -1132,7 +1139,7 @@
     background: rgba(170,68,255,0.2);
     border: 1px solid rgba(170,68,255,0.5);
     padding: 3px 12px;
-    border-radius: 4px;
+    border-radius: var(--rd-xs);
     font-size: 11px;
     color: #c9f;
     z-index: 10;
@@ -1202,10 +1209,10 @@
   .size-btn:hover { border-color: var(--btn-hover-border); color: var(--btn-hover-color); }
   .size-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   .size-btn.active {
-    background: rgba(255,180,0,0.2);
-    border-color: var(--c-warning-deep);
-    color: #fc0;
-    box-shadow: 0 0 12px rgba(255,180,0,0.3);
+    background: var(--btn-active-bg);
+    border-color: var(--btn-active-border);
+    color: var(--btn-active-color);
+    box-shadow: 0 0 12px rgba(68,170,255,0.3);
   }
 
   /* ===== 編輯器額外工具 ===== */
@@ -1282,7 +1289,7 @@
     width: 100%;
     background: linear-gradient(90deg, #f44, #f88);
     transition: width 0.15s;
-    border-radius: 2px;
+    border-radius: var(--rd-xs);
   }
   #hp-bar-inner.low { background: linear-gradient(90deg, #c00, #f44); animation: hp-blink 0.6s infinite; }
   @keyframes hp-blink { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
@@ -1298,7 +1305,7 @@
     height: 100%; width: 0%;
     background: linear-gradient(90deg, #2a8, #4fd);
     transition: width 0.2s;
-    border-radius: 2px;
+    border-radius: var(--rd-xs);
   }
   #level-text {
     font-size: var(--fs-xxs); color: var(--c-xp); margin-top: 2px; letter-spacing: 1px;
@@ -1422,7 +1429,7 @@
     opacity: 0;
     background: rgba(40,0,0,0.8);
     border: 2px solid #f33;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     padding: 14px 34px;
     box-shadow: 0 0 40px rgba(255,0,0,0.6);
   }
@@ -1576,7 +1583,7 @@
     padding: 13px 36px;
     font-size: 16px;
     font-family: inherit;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     cursor: pointer;
     letter-spacing: 3px;
     color: #fff;
@@ -1584,7 +1591,7 @@
   }
   #death-screen .death-btn:active { transform: scale(0.96); }
   #death-screen .death-btn.retry { background: linear-gradient(135deg, #f55, #c22); box-shadow: 0 0 25px rgba(255,80,80,0.4); }
-  #death-screen .death-btn.menu { background: linear-gradient(135deg, #666, #444); }
+  #death-screen .death-btn.menu { background: var(--btn-secondary-bg); border: 1px solid var(--btn-secondary-border); color: var(--btn-secondary-color); }
 
   /* ===== 攻擊提示 ===== */
   #toast-msg {
@@ -1596,7 +1603,7 @@
     border: 1px solid #fa0;
     color: #fc4;
     padding: 8px 20px;
-    border-radius: 6px;
+    border-radius: var(--rd-sm);
     font-size: 14px;
     z-index: 30;
     pointer-events: none;
@@ -1711,7 +1718,7 @@
     z-index: 200;
     background: rgba(20,20,35,0.95);
     border: 2px solid #fc4;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     padding: 12px 16px;
     max-width: 280px;
     box-shadow: 0 0 25px rgba(255,200,60,0.4);
@@ -1736,7 +1743,7 @@
     display: inline-block;
     width: 18px; height: 18px;
     border: 2px solid #fc4;
-    border-radius: 4px;
+    border-radius: var(--rd-xs);
     margin-right: 8px;
     vertical-align: middle;
     text-align: center;
@@ -1781,9 +1788,9 @@
   }
   .ach-tab:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   .ach-tab.active {
-    background: rgba(255,200,60,0.15);
-    border-color: var(--c-warning);
-    color: var(--c-warning);
+    background: var(--btn-active-bg);
+    border-color: var(--btn-active-border);
+    color: var(--btn-active-color);
   }
   /* v3.0：成就篩選列（全部/已解鎖/未解鎖），沿用 ach-tab tokens */
   .ach-filter-row { display: flex; gap: 8px; margin: -8px 0 14px; }
@@ -1816,7 +1823,7 @@
   .ach-item {
     background: rgba(255,255,255,0.04);
     border: 1px solid #333;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     padding: 10px 14px;
     display: flex;
     align-items: center;
@@ -1836,7 +1843,7 @@
   .ach-item .ach-box {
     width: 36px; height: 36px;
     border: 2px solid;
-    border-radius: 6px;
+    border-radius: var(--rd-sm);
     display: flex; align-items: center; justify-content: center;
     font-size: 16px;
     flex-shrink: 0;
@@ -1856,12 +1863,12 @@
   .ach-prog-bar {
     width: 64px; height: 5px;
     background: rgba(255,255,255,0.12);
-    border-radius: 3px; overflow: hidden;
+    border-radius: var(--rd-xs); overflow: hidden;
   }
   .ach-prog-bar span {
     display: block; height: 100%;
     background: linear-gradient(90deg, #4af, #8df);
-    border-radius: 3px;
+    border-radius: var(--rd-xs);
   }
   .ach-prog-txt { font-size: 10px; color: #8ab; }
   .ach-back-btn {
@@ -1883,7 +1890,7 @@
   .stat-cell {
     background: rgba(255,255,255,0.04);
     border: 1px solid #333;
-    border-radius: 8px;
+    border-radius: var(--rd-md);
     padding: 10px 14px;
   }
   .stat-cell .sk { font-size: 11px; color: #888; letter-spacing: 1px; }
@@ -1909,9 +1916,9 @@
   .weather-btn:hover { border-color: var(--btn-hover-border); color: var(--btn-hover-color); }
   .weather-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   .weather-btn.active {
-    background: rgba(120,180,255,0.2);
-    border-color: #8af;
-    color: #8cf;
+    background: var(--btn-active-bg);
+    border-color: var(--btn-active-border);
+    color: var(--btn-active-color);
   }
 
   /* ===== 可訪問性：字體大小 ===== */
@@ -2115,7 +2122,7 @@
   .tutorial-card {
     background: rgba(15,20,40,0.8);
     border: 1px solid #4af;
-    border-radius: 12px;
+    border-radius: var(--rd-xl);
     padding: 26px 30px;
     max-width: 460px;
     width: 100%;
@@ -2126,12 +2133,12 @@
   .tutorial-card h2 { color: #4af; letter-spacing: 3px; margin-bottom: 16px; font-size: 22px; }
   .tutorial-card .tut-rows { text-align: left; font-size: 13px; line-height: 2.1; color: #cde; margin-bottom: 20px; }
   .tutorial-card .tut-rows .key {
-    display: inline-block; background: #222; border: 1px solid #555; border-radius: 3px;
+    display: inline-block; background: #222; border: 1px solid #555; border-radius: var(--rd-xs);
     padding: 0 6px; margin: 0 2px; font-size: 11px; color: #6cf;
   }
   .tutorial-card .tut-start-btn {
     background: linear-gradient(135deg,#4af,#28c); color: #fff; border: none;
-    padding: 12px 40px; font-size: 16px; font-family: inherit; border-radius: 8px;
+    padding: 12px 40px; font-size: 16px; font-family: inherit; border-radius: var(--rd-md);
     cursor: pointer; letter-spacing: 3px;
   }
 
@@ -2140,7 +2147,7 @@
     position: fixed; bottom: 16%; left: 50%; transform: translateX(-50%);
     display: none; align-items: center; gap: 12px;
     background: rgba(8,16,36,0.88); border: 1px solid #4af;
-    border-radius: 10px; padding: 10px 16px;
+    border-radius: var(--rd-lg); padding: 10px 16px;
     color: #cdf; font-size: 13px; z-index: 280;
     pointer-events: none; max-width: 92vw; text-align: center;
     box-shadow: 0 0 24px rgba(68,170,255,0.25);
@@ -2148,7 +2155,7 @@
   #step-tutorial.show { display: flex; animation: fade-in .25s ease-out both; }
   #step-tutorial button {
     pointer-events: auto; background: #1a3a6a; color: #fff;
-    border: 1px solid #6af; border-radius: 6px;
+    border: 1px solid #6af; border-radius: var(--rd-sm);
     padding: 4px 12px; cursor: pointer; font-size: 12px; font-family: inherit;
     flex-shrink: 0;
   }
@@ -2210,7 +2217,7 @@
   #start-info span { color: #cdf; }
   /* --- UC7：死亡統計摘要 --- */
   .death-summary { margin: 14px auto 18px; max-width: 320px; display: flex; flex-direction: column; gap: 6px; text-align: left; font-size: 14px; color: #cde; }
-  .death-summary .death-row { display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 6px; padding: 6px 12px; }
+  .death-summary .death-row { display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: var(--rd-sm); padding: 6px 12px; }
   .death-summary .death-k { color: #888; letter-spacing: 1px; }
   .death-summary .death-v { color: #f88; font-weight: bold; }
   /* --- UC4：粒子密度三鍵 --- */
@@ -2382,39 +2389,39 @@
     <!-- 右側轉向區 -->
     <div id="look-zone"></div>
     <!-- 按鈕 -->
-    <div class="touch-btn" id="btn-run">
+    <div class="touch-btn" id="btn-run" title="奔跑" aria-label="奔跑">
       <span>速</span>
       <span class="btn-label">奔跑</span>
     </div>
-    <div class="touch-btn" id="btn-torch">
+    <div class="touch-btn" id="btn-torch" title="手電筒" aria-label="手電筒">
       <span>燈</span>
       <span class="btn-label">手電筒</span>
     </div>
-    <div class="touch-btn" id="btn-map">
+    <div class="touch-btn" id="btn-map" title="地圖" aria-label="地圖">
       <span>圖</span>
       <span class="btn-label">地圖</span>
     </div>
-    <div class="touch-btn" id="btn-autoplay">
+    <div class="touch-btn" id="btn-autoplay" title="自動遊玩" aria-label="自動遊玩">
       <span style="font-size:16px;font-weight:bold;">AI</span>
       <span class="btn-label">自動</span>
     </div>
-    <div class="touch-btn" id="btn-god">
+    <div class="touch-btn" id="btn-god" title="上帝視角" aria-label="上帝視角">
       <span style="font-size:18px;font-weight:bold;">神</span>
       <span class="btn-label">上帝視角</span>
     </div>
-    <div class="touch-btn" id="btn-attack">
+    <div class="touch-btn" id="btn-attack" title="攻擊" aria-label="攻擊">
       <span style="font-size:18px;font-weight:bold;">擊</span>
       <span class="btn-label">攻擊</span>
     </div>
-    <div class="touch-btn" id="btn-dash">
+    <div class="touch-btn" id="btn-dash" title="衝刺" aria-label="衝刺">
       <span style="font-size:16px;font-weight:bold;">閃</span>
       <span class="btn-label">衝刺</span>
     </div>
-    <div class="touch-btn" id="btn-shoot">
+    <div class="touch-btn" id="btn-shoot" title="能量彈射擊" aria-label="能量彈射擊">
       <span style="font-size:16px;font-weight:bold;">彈</span>
       <span class="btn-label">能量彈</span>
     </div>
-    <div class="touch-btn" id="btn-pause">
+    <div class="touch-btn" id="btn-pause" title="暫停" aria-label="暫停">
       <span class="pause-icon"></span>
       <span class="btn-label">暫停</span>
     </div>
@@ -2492,6 +2499,7 @@
       <button class="size-btn" data-mode="timeAttack">計時</button>
       <button class="size-btn" data-mode="hardcore">一命</button>
       <button class="size-btn" data-mode="dailyMode">每日</button>
+      <button class="size-btn" data-mode="endlessMode">無盡</button>
     </div>
     <div class="size-label">天氣</div>
     <div class="weather-row" id="weather-row">
@@ -2720,6 +2728,14 @@
           <option value="off">關閉</option>
         </select>
       </div>
+      <!-- v4.0：寶箱哥布林事件開關 -->
+      <div class="setting-row">
+        <label>寶箱哥布林</label>
+        <select id="set-goblin">
+          <option value="on">開啟</option>
+          <option value="off">關閉</option>
+        </select>
+      </div>
       <div class="setting-row">
         <label>學習模式</label>
         <select id="set-learning">
@@ -2762,6 +2778,7 @@
         <button class="tool-btn" data-tool="bars" title="放置欄杆（障礙物）">欄杆</button>
         <button class="tool-btn" data-tool="ice" title="放置冰面（滑行地板）">冰面</button>
         <button class="tool-btn" data-tool="crumble" title="放置崩落地板（踏上後碎裂）">崩落</button>
+        <button class="tool-btn" data-tool="mire" title="放置積水（減速地形，無法衝刺）">積水</button>
         <button class="tool-btn" data-tool="fill" title="填充（油漆桶）">填充</button>
         <button class="tool-btn" data-tool="select" title="選擇區域">選擇</button>
         <button class="tool-btn" data-tool="rect" title="拖曳畫矩形（牆/依筆刷值）">矩形</button>
@@ -2909,8 +2926,8 @@ const postfxOverlayEl = document.getElementById('postfx-overlay');
 const bossHudEl = document.getElementById('boss-hud');
 const bossBarInnerEl = document.getElementById('boss-bar-inner');
 const buffsHudEl = document.getElementById('buffs-hud');
-// v3.3：版本字串常數——開始畫面版本標籤統一引用此處，避免改版漏改
-const GAME_VERSION = 'v3.3';
+// v4.0：版本字串常數——開始畫面版本標籤統一引用此處，避免改版漏改
+const GAME_VERSION = 'v4.0';
 // v3.3：傷害方向指示 overlay（JS 建立，紅色弧形暗角依受擊方向轉向）
 const damageDirEl = document.createElement('div');
 damageDirEl.id = 'damage-dir';
@@ -2935,7 +2952,12 @@ function triggerDamageDirection() {
     const d = dx * dx + dy * dy;
     if (d < bestD) { bestD = d; ang = Math.atan2(dy, dx); found = true; }
   }
-  if (!found) return;
+  if (!found) {
+    // v4.0 F2：無攻擊源的環境傷害（尖刺/冰面/崩落）——不顯示方向箭頭，
+    // 僅觸發簡短中央暗紅脈衝（重用 damageFlash 既有機制；damagePlayer 已先設 0.4，此處保底）
+    damageFlash = Math.max(damageFlash, 0.35);
+    return;
+  }
   let rel = ang - player.dir;
   while (rel > Math.PI) rel -= Math.PI * 2;
   while (rel < -Math.PI) rel += Math.PI * 2;
@@ -3006,9 +3028,11 @@ const settings = {
   // v3.0：新內容開關（事件／模式，皆可在設定面板/開始畫面切換）
   meteorEvent: true,         // v3.0：隕石雨事件開關（預設開）
   eclipseEvent: true,        // v3.0：日蝕事件開關（預設開）
+  goblinEvent: true,          // v4.0：寶箱哥布林事件開關（預設開）
   timeAttack: false,        // v3.0：計時挑戰模式（預設關）
   hardcore: false,           // v3.0：一命模式（死亡即結算回主選單）
   dailyMode: false,          // v3.0：每日迷宮（當日固定種子迷宮）
+  endlessMode: false,        // v4.0：無盡波次模式（預設關）
 };
 function loadSettings() {
   try {
@@ -3074,9 +3098,11 @@ function loadSettings() {
   // v3.0：新事件/模式開關型別驗證（防壞值）
   boolFix('meteorEvent', true);
   boolFix('eclipseEvent', true);
+  boolFix('goblinEvent', true); // v4.0
   boolFix('timeAttack', false);
   boolFix('hardcore', false);
   boolFix('dailyMode', false);
+  boolFix('endlessMode', false); // v4.0
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
@@ -3099,6 +3125,7 @@ function getEnemyRGB(type) {
     healer:   [90, 255, 190],
     echo:     [190, 120, 255],  /* v3.0 */
     miner:    [160, 120, 60],   /* v3.0 */
+    lancer:   [200, 200, 90],   /* v4.0 盾槍兵：金黃 */
   };
   if (mode === 'protan') {
     // 紅色弱視：紅色難辨 → chaser 改紫、patrol 改金黃、shooter 改粉紅
@@ -3113,6 +3140,7 @@ function getEnemyRGB(type) {
       healer:   [90, 255, 190],
       echo:     [255, 110, 200],  /* v3.0 */
       miner:    [160, 120, 60],   /* v3.0 */
+      lancer:   [255, 170, 90],   /* v4.0 盾槍兵：橘（與 patrol 金黃區分） */
     };
   } else if (mode === 'deutan') {
     // 綠色弱視：綠色難辨 → patrol 改黃、shooter 改藍、chaser 改紅粉
@@ -3127,6 +3155,7 @@ function getEnemyRGB(type) {
       healer:   [90, 255, 220],
       echo:     [120, 130, 255],  /* v3.0 */
       miner:    [180, 130, 60],   /* v3.0 */
+      lancer:   [255, 150, 100],  /* v4.0 盾槍兵：暖橘（與 patrol 黃區分） */
     };
   } else if (mode === 'tritan') {
     // 藍色弱視：藍色難辨 → shooter 改橘、patrol 改青綠
@@ -3141,6 +3170,7 @@ function getEnemyRGB(type) {
       healer:   [120, 255, 160],
       echo:     [200, 130, 255],  /* v3.0 */
       miner:    [170, 120, 60],   /* v3.0 */
+      lancer:   [220, 190, 80],   /* v4.0 盾槍兵：琥珀（與 patrol 青綠區分） */
     };
   }
   return pal[type] || pal.patrol;
@@ -3257,20 +3287,39 @@ function applyDifficulty(resetMinimap = true) {
 // v3.3：難度跨閾 toast 狀態——tier: -1=連敗變弱, 0=正常, 1=連勝變強
 let _diffTierInit = false;
 let _lastDiffTier = 0;
+let _lastDiffHpMult = 1;      // v4.0 C7：上一次 hpMult，偵測跨 0.8/1.2 門檻
+let _lastDiffSysToastT = 0;   // v4.0 C7：系統難度 toast 節流時間戳（60s）
+let _suppressStreakToast = false; // v4.0 C7：系統 toast 已跳時，本 tick 壓掉連勝/連敗 toast
 function computeDifficultyAdjust() {
   const adj = { hpMult: 1, countMult: 1 };
   const deathStreak = stats.deathStreak || 0;
   const winStreak = stats.winStreak || 0;
   let tier = 0;
   if (deathStreak >= 3) { adj.hpMult = 0.8; adj.countMult = 0.8; tier = -1; }
-  else if (winStreak >= 3) { adj.hpMult = 1.15; adj.countMult = 1.1; tier = 1; }
+  else if (winStreak >= 3) { adj.hpMult = 1.2; adj.countMult = 1.1; tier = 1; }
   adj.hpMult = Math.min(1.3, Math.max(0.7, adj.hpMult));
   adj.countMult = Math.min(1.3, Math.max(0.7, adj.countMult));
-  // v3.3：連勝/連敗跨閾時簡潔 toast（初次不跳，避免開局洗版）
-  if (_diffTierInit && tier !== _lastDiffTier && typeof showToast === 'function') {
+  // v4.0 C7：跨 hpMult 0.8（變簡單）/1.2（變困難）門檻時，系統提示一次（60s 節流）
+  if (_diffTierInit && typeof showToast === 'function') {
+    const nowBand = adj.hpMult <= 0.8 ? -1 : (adj.hpMult >= 1.2 ? 1 : 0);
+    const prevBand = _lastDiffHpMult <= 0.8 ? -1 : (_lastDiffHpMult >= 1.2 ? 1 : 0);
+    if (nowBand !== prevBand) {
+      const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+      // ===0 代表本局尚未跳過系統 toast，首次跨門檻一律放行；之後 60s 節流
+      if (_lastDiffSysToastT === 0 || now - _lastDiffSysToastT >= 60000) {
+        showToast('系統感應到你的實力，調整難度');
+        _lastDiffSysToastT = now;
+        _suppressStreakToast = true; // 已跳系統 toast，本 tick 壓掉連勝/連敗 toast，避免洗版
+      }
+    }
+  }
+  // v3.3：連勝/連敗跨閾時簡潔 toast（初次不跳；v4.0 C7 與系統 toast 錯開不洗版）
+  if (_diffTierInit && tier !== _lastDiffTier && typeof showToast === 'function' && !_suppressStreakToast) {
     if (tier === 1) showToast('連勝中！敵人變強了');
     else if (tier === -1) showToast('連敗中…敵人變弱了');
   }
+  _suppressStreakToast = false;
+  _lastDiffHpMult = adj.hpMult;
   _lastDiffTier = tier;
   _diffTierInit = true;
   return adj;
@@ -3328,13 +3377,15 @@ function mapAt(x, y) {
 const TILE_EMPTY = 0, TILE_SPIKE = 4, TILE_DOOR = 5, TILE_BARS = 6;
 const TILE_ICE = 7;       // 冰面：可行走，移動慣性大、摩擦極低
 const TILE_CRUMBLE = 8;   // 崩落地板：可行走，踏上後倒數碎裂成牆
+const TILE_MIRE = 9;      // v4.0：積水：可行走，踏入減速、無法衝刺
 // 可行走（腳踏上去不會被牆擋住）
-function isWalkable(v) { return v === 0 || v === TILE_SPIKE || v === TILE_ICE || v === TILE_CRUMBLE; }
+function isWalkable(v) { return v === 0 || v === TILE_SPIKE || v === TILE_ICE || v === TILE_CRUMBLE || v === TILE_MIRE; }
 // 會阻擋光線投射與移動（視為牆）
 function isBlocking(v) { return v === 1 || v === 2 || v === 3 || v === TILE_DOOR || v === TILE_BARS; }
 // v2.5：新地板機制預留掛鉤判定函數（下一輪可直接掛成就/計數）
 function isIceTile(v) { return v === TILE_ICE; }
 function isCrumbleTile(v) { return v === TILE_CRUMBLE; }
+function isMireTile(v) { return v === TILE_MIRE; } // v4.0：積水判定
 
 // --- 玩家 ---
 const player = {
@@ -3478,7 +3529,7 @@ let playerDead = false;
 let invulnTimer = 0;       // 受傷後短暫無敵（陷阱）
 let shieldActive = false;  // 舊護盾（吸收下一次傷害，保留相容）
 let shieldImmuneT = 0;     // 護盾道具：啟動後 N 秒免疫傷害
-let itemInv = { shield: 0, grenade: 0, cannon: 0, frostGrenade: 0, recall: 0 }; // 道具欄庫存（有怪模式）/* v3.0 新增 frostGrenade/recall */
+let itemInv = { shield: 0, grenade: 0, cannon: 0, frostGrenade: 0, recall: 0, smoke: 0 }; // 道具欄庫存（有怪模式）/* v3.0 新增 frostGrenade/recall；v4.0 新增 smoke 煙霧彈 */
 let cannonAiming = false;  // 炮彈瞄準模式
 let cannonCd = 0;          // AI 炮彈冷卻
 let cannonTargets = [];    // 炮彈落點 {x,y,t}（t 倒數，1 秒後爆炸）
@@ -3498,6 +3549,17 @@ let iceSlideDist = 0;        // v2.5：本局冰面滑行累計距離（ice_runn
 let bloodMoonEverOn = false; // v2.5：本局血月是否曾經觸發（blood_moon_survivor 成就用）
 let crumbleEvacCount = 0;    // v2.5：本局崩落地板安全撤離次數（crumble_survivor 成就用）
 let silenceT = 0;            // v2.5：全團沉默剩餘秒數（治療術士被殺後觸發，期間敵人不施放特殊技能）
+
+// --- v4.0：新敵人/新道具/新成就跨區狀態 ---
+let smokeT = 0;               // 煙霧彈剩餘秒數：>0 時敵人失去對玩家的主動視線（接觸傷害仍可）
+let lancerBlockToastCd = 0;   // 盾槍兵「格擋」浮字 0.5s 節流（牽制用）
+let runBackstabKills = 0;     // v4.0：本局從背面/側面擊殺盾槍兵數（lancer_backstab）
+let runSmokeUsed = 0;          // v4.0：本局使用煙霧彈次數（smoke_master）
+let runMireSteps = 0;         // v4.0：本局穿越積水格數（mire_walker；TILE_MIRE 由 C 代理定義）
+let runGoblinKills = 0;       // v4.0：本局擊殺寶箱哥布林數（goblin_loot；isGoblin 由 C 代理標記）
+let runCrouchT = 0;           // v4.0：本局累計蹲下秒數（crouch_win：>50% 通關）
+let runDashUsed = false;      // v4.0：本局是否用過衝刺（no_dash_win：未用衝刺通關）
+let v4bLastMireCell = '';     // v4.0：上一次站過的積水格 key（避免同格重複計數）
 
 // --- 增益狀態 ---
 const buffs = {
@@ -3733,6 +3795,143 @@ function updateEclipseEvent(dt) {
     showFloatText('日蝕降臨', '#88f');
     if (!autoPlay) showToast('日蝕：天空暗下來了');
   }
+}
+
+// ============================================================
+// v4.0：寶箱哥布林事件
+//  白天每 25 秒擲骰 5% 生成 1 隻；遠離玩家逃、被打加速 3s、
+//  存活 30s 後鑽地消失；被殺掉落 1 顆額外寶石。
+// ============================================================
+let goblinSpawned = false;
+let goblinRollT = 0;
+let goblinRef = null;   // 目前存活哥布林參照（死亡判定用）
+function updateGoblinEvent(dt) {
+  if (!gameStarted || gameWon || playerDead || paused) return;
+  if (!settings.goblinEvent) return;
+  if (settings.monsterMode === 'none') return;
+
+  // --- 既有哥布林：逃離 AI / 計時 / 死亡判定 ---
+  if (goblinRef) {
+    const g = goblinRef;
+    // 被玩家擊殺：state 已由 killEnemy 標 dead → 噴 1 顆額外寶石
+    if (g.state === 'dead') {
+      gems.push({ x: g.x, y: g.y, collected: false, phase: 0 });
+      if (!autoPlay) showFloatText('哥布林掉落寶石！', '#fd0');
+      goblinSpawned = false;
+      goblinRef = null;
+      return;
+    }
+    g.lifeT += dt;
+    // 被打一下 → 加速 3 秒（hitFlash 上升沿偵測）
+    if (g.hitFlash > 0 && (!g._prevHF || g._prevHF <= 0)) g.fleeBoostT = 3;
+    g._prevHF = g.hitFlash;
+    if (g.fleeBoostT > 0) g.fleeBoostT -= dt;
+    // 存活 30 秒 → 鑽地消失（直接移出陣列，不噴寶石）
+    if (g.lifeT >= 30) {
+      const idx = enemies.indexOf(g);
+      if (idx >= 0) enemies.splice(idx, 1);
+      for (let k = 0; k < 10; k++) {
+        spawnParticle(g.x, g.y, 0.2, (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 1.5, 0.5, 0.5, [255, 210, 90], 2.5);
+      }
+      if (!autoPlay) showToast('寶箱哥布林鑽地逃走了…');
+      goblinSpawned = false;
+      goblinRef = null;
+      return;
+    }
+    // 逃離移動：背對玩家全速逃
+    g.state = 'flee';
+    const ang = Math.atan2(g.y - player.y, g.x - player.x);
+    const sp = g.speed * (g.fleeBoostT > 0 ? 1.8 : 1.0) * dt;
+    const mvx = Math.cos(ang) * sp, mvy = Math.sin(ang) * sp;
+    g.dir = ang + Math.PI;
+    if (enemyCanMove(g.x + mvx, g.y)) g.x += mvx;
+    if (enemyCanMove(g.x, g.y + mvy)) g.y += mvy;
+    return;
+  }
+
+  // --- 擲骰生成（僅白天時段） ---
+  if (!settings.dayNightCycle || dayPhaseName !== '白天') return;
+  goblinRollT += dt;
+  if (goblinRollT < 25) return;
+  goblinRollT = 0;
+  if (Math.random() >= 0.05) return;
+  // 找出生點：地圖邊界優先、距玩家 >= 8 格；邊界牆多時退而求其次掃全圖可行走格
+  let spot = null;
+  const farCands = [];
+  for (let cy = 1; cy < MAP_H - 1 && !spot; cy++) {
+    for (let cx = 1; cx < MAP_W - 1; cx++) {
+      if (!isWalkable(MAP[cy][cx])) continue;
+      if (Math.hypot(cx + 0.5 - player.x, cy + 0.5 - player.y) < 8) continue;
+      farCands.push({ x: cx, y: cy });
+    }
+  }
+  if (farCands.length > 0) {
+    // 偏好地圖最外圍兩圈的格子，否則隨機挑
+    const perimeter = farCands.filter(c => c.x <= 2 || c.y <= 2 || c.x >= MAP_W - 3 || c.y >= MAP_H - 3);
+    const pool = perimeter.length > 0 ? perimeter : farCands;
+    spot = pool[Math.floor(Math.random() * pool.length)];
+  }
+  if (!spot) return;
+  const g = makeEnemyOfType('goblin', spot);
+  g.isGoblin = true;
+  g.hp = g.maxHp = 15; g.speed = 3.5; g.touchDmg = 5;
+  g.lifeT = 0; g.fleeBoostT = 0; g.state = 'flee';
+  enemies.push(g);
+  goblinRef = g;
+  goblinSpawned = true;
+  if (!autoPlay) showFloatText('寶箱哥布林現身！快追！', '#fd0');
+}
+
+// ============================================================
+// v4.0：無盡波次模式
+//  每 15 秒一波；波次 N 生成 3+N 隻敵人（pool 隨波次開放）；
+//  每 3 波升一級基礎 HP；15 波後 HP 鎖頂、數量封頂 20 隻。
+// ============================================================
+let endlessWave = 0;
+let endlessWaveT = 0;
+function startEndlessWaves() {
+  endlessWave = 0;
+  endlessWaveT = 4; // 開局 4 秒後第一波
+  enemies = [];
+  if (!autoPlay) showToast('無盡模式開始——存活越久越好！');
+}
+function updateEndlessWaves(dt) {
+  if (!settings.endlessMode) return;
+  if (!gameStarted || gameWon || playerDead || paused) return;
+  endlessWaveT -= dt;
+  if (endlessWaveT > 0) return;
+  endlessWaveT = 15;
+  endlessWave++;
+  // 數量：波次 N = 3+N；15 波後每波 +2 封頂 20
+  let count;
+  if (endlessWave <= 15) count = 3 + endlessWave;
+  else count = Math.min(20, 18 + (endlessWave - 15) * 2);
+  // HP 等級：每 3 波 +1，15 波後鎖頂（5 級）
+  const hpLvl = Math.min(5, Math.floor(endlessWave / 3));
+  const hpMult = 1 + hpLvl * 0.5;
+  // 敵人池隨波次開放
+  const pool = ['patrol', 'chaser'];
+  if (endlessWave >= 3) pool.push('shooter');
+  if (endlessWave >= 5) pool.push('swarm', 'bomber');
+  if (endlessWave >= 8) pool.push('tank', 'lurker');
+  if (endlessWave >= 12) pool.push('splitter', 'echo');
+  // 在遠離玩家的可行走格生成
+  let spawned = 0;
+  for (let tries = 0; tries < count * 6 && spawned < count; tries++) {
+    const cx = 1 + Math.floor(Math.random() * (MAP_W - 2));
+    const cy = 1 + Math.floor(Math.random() * (MAP_H - 2));
+    if (!isWalkable(MAP[cy][cx])) continue;
+    if (Math.hypot(cx + 0.5 - player.x, cy + 0.5 - player.y) < 6) continue;
+    const type = pool[Math.floor(Math.random() * pool.length)];
+    const e = makeEnemyOfType(type, { x: cx, y: cy });
+    e.hp = e.maxHp = Math.max(1, Math.round(e.hp * hpMult));
+    e.state = 'chase';
+    enemies.push(e);
+    spawned++;
+  }
+  if (!autoPlay) showToast('第 ' + endlessWave + ' 波來襲！');
+  if (endlessWave === 5) unlockAchievement('endless_5');
+  if (endlessWave === 10) unlockAchievement('endless_10');
 }
 
 // --- 鑰匙 ---
@@ -5057,6 +5256,11 @@ function render() {
           const blink = (Math.floor(frameNow / 90) % 2 === 0) ? 55 : 0;
           baseR += blink; baseG *= 0.5; baseB *= 0.5;
         }
+      } else if (cellTile === TILE_MIRE) {
+        // v4.0：積水——深青灰 #3a5a6a 純地板著色，無動畫（踏入才噴水泡粒子）
+        baseR = tile ? 58 : 46;
+        baseG = tile ? 90 : 72;
+        baseB = tile ? 106 : 84;
       } else {
         baseR = tile ? 50 : 40;
         baseG = tile ? 48 : 38;
@@ -5838,6 +6042,9 @@ function canMove(nx, ny) {
 let slideVX = 0, slideVY = 0;   // 滑行慣性速度（格/秒）
 let iceSlideParticleT = 0;       // v2.8：冰面滑行冰屑粒子生成計時（秒）
 function underIceTile() { return isIceTile(mapAt(Math.floor(player.x), Math.floor(player.y))); }
+// v4.0：積水地形輔助
+let mireStepT = 0;               // 踏入積水的水泡粒子計時（秒）
+function underMireTile() { return isMireTile(mapAt(Math.floor(player.x), Math.floor(player.y))); }
 function movePlayerWithSlide(desiredDx, desiredDy, dt) {
   if (underIceTile() && dashState.active <= 0) {
     // 冰面：期望位移換算速度目標，小加速度疊加（起步慢），摩擦衰減保留慣性
@@ -6426,6 +6633,15 @@ function generateTraps() {
     const c = candidates[i];
     MAP[c.y][c.x] = TILE_SPIKE;
   }
+  // v4.0：積水地形——僅中型以上迷宮（>=15x15），每格 <5% 機率，每圖上限 6 格
+  if (MAP_W >= 15 && MAP_H >= 15) {
+    let mirePlaced = 0;
+    for (const c of candidates) {
+      if (mirePlaced >= 6) break;
+      if (MAP[c.y][c.x] !== 0) continue;
+      if (Math.random() < 0.04) { MAP[c.y][c.x] = TILE_MIRE; mirePlaced++; }
+    }
+  }
   currentMapVersion++;
 }
 
@@ -6532,6 +6748,18 @@ function makeEnemyOfType(type, c) {
   if (type === 'miner') {
     const h = scale(45);
     return { ...base, type, hp: h, maxHp: h, speed: 1.0, touchDmg: 10, burying: 0 };
+  }
+  // v4.0：lancer 盾槍兵：方向性護盾。hp 70 / speed 1.4 / touchDmg 18；
+  // 面朝方向記錄於 e.dir（chase 時持續面向玩家），正面 70° 扇形內的攻擊被格擋至 1 傷。
+  if (type === 'lancer') {
+    const h = scale(70);
+    return { ...base, type, hp: h, maxHp: h, speed: 1.4, touchDmg: 18 };
+  }
+  // v4.0：goblin 寶箱哥布林：低 HP 逃敵，被打加速、存活 30s 鑽地；被殺噴 1 顆額外寶石
+  // （事件端 updateGoblinEvent 仍會覆寫 lifeT/fleeBoostT/state，此處提供乾淨預設）
+  if (type === 'goblin') {
+    const h = scale(15);
+    return { ...base, type: 'goblin', hp: h, maxHp: h, speed: 3.5, touchDmg: 5, isGoblin: true, dir: 0, hitFlash: 0 };
   }
   // patrol 預設
   const h = scale(30);
@@ -6665,10 +6893,10 @@ function generateItems() {
   // 有怪模式才有戰鬥道具（護盾/手雷/炮彈）；無怪模式只出輔助道具
   const types = settings.monsterMode === 'none'
     ? ['health', 'speed', 'star', 'crystal', 'xpgem', 'maxup', 'reveal', 'clair']
-    : ['health', 'speed', 'shield', 'star', 'crystal', 'xpgem', 'maxup', 'reveal', 'grenade', 'cannon', 'scroll', 'charm', 'frost_grenade', 'recall_scroll', 'clair']; // v3.0 +新道具；v3.3 +clair
+    : ['health', 'speed', 'shield', 'star', 'crystal', 'xpgem', 'maxup', 'reveal', 'grenade', 'cannon', 'scroll', 'charm', 'frost_grenade', 'recall_scroll', 'clair', 'smoke_bomb']; // v3.0 +新道具；v3.3 +clair；v4.0 +smoke_bomb
   const weights = settings.monsterMode === 'none'
     ? [4, 3, 2, 2, 2, 1, 1, 0.8]
-    : [3, 2, 2, 2, 1, 2, 1, 1, 1.5, 1.2, 1.0, 0.8, 1.0, 0.9, 0.8]; // v3.0 新道具低權重；v3.3 clair 低權重
+    : [3, 2, 2, 2, 1, 2, 1, 1, 1.5, 1.2, 1.0, 0.8, 1.0, 0.9, 0.8, 1.0]; // v3.0 新道具低權重；v3.3 clair 低權重；v4.0 smoke_bomb 權重 1.0
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const count = Math.min(2 + Math.floor(Math.random() * 3), candidates.length);
   for (let i = 0; i < count; i++) {
@@ -7195,7 +7423,22 @@ function updateProjectiles(dt) {
         if (e.state === 'dead') continue;
         const dx = e.x - pr.x, dy = e.y - pr.y;
         if (dx*dx + dy*dy < 0.4*0.4) {
-          if (!(e.type === 'boss' && e.berserkInvuln > 0)) e.hp -= pr.damage;
+          // v4.0：盾槍兵投射物同樣吃方向性護盾判定（與近戰同一套角度規則）
+          let applied = pr.damage;
+          if (e.type === 'lancer') {
+            const angFromPlayer = Math.atan2(e.y - pr.y, e.x - pr.x);
+            let ld = angFromPlayer - e.dir;
+            while (ld > Math.PI) ld -= Math.PI * 2;
+            while (ld < -Math.PI) ld += Math.PI * 2;
+            if (Math.abs(ld) * 180 / Math.PI < 70) {
+              applied = 1;
+              const now = performance.now() / 1000;
+              if (now >= lancerBlockToastCd) { lancerBlockToastCd = now + 0.5; showFloatText('格擋', '#d4af37'); }
+            } else {
+              e._backstabLanded = true;
+            }
+          }
+          if (!(e.type === 'boss' && e.berserkInvuln > 0)) e.hp -= applied;
           e.hitFlash = 0.15;
           spawnParticle(e.x, e.y, 0.5, 0, 0, 1, 0.3, pr.color, 2);
           if (e.hp <= 0) killEnemy(e);
@@ -7263,6 +7506,15 @@ function killEnemy(e) {
     stats.minerKills = (stats.minerKills || 0) + 1;
     if (stats.minerKills >= 5) unlockAchievement('miner_hunter');
   }
+  // v4.0：寶箱哥布林擊殺計數（isGoblin 由 C 代理在生成時標記）；盾槍兵背面擊殺計數
+  if (e.isGoblin) {
+    runGoblinKills++;
+    if (runGoblinKills >= 3) unlockAchievement('goblin_loot');
+  }
+  if (e.type === 'lancer' && e._backstabLanded) {
+    runBackstabKills++;
+    if (runBackstabKills >= 5) unlockAchievement('lancer_backstab');
+  }
   if (e.type === 'boss') {
     unlockAchievement('boss_slayer');
     onBossDefeated(e);
@@ -7288,6 +7540,31 @@ function killEnemy(e) {
 
 // 敵人更新
 function updateEnemies(dt) {
+  // v4.0：煙霧彈倒數 + 本局成就追蹤（蹲下秒數 / 積水格穿越）——置於最前，炮彈瞄準時也持續
+  if (smokeT > 0) {
+    smokeT -= dt;
+    if (smokeT < 0) smokeT = 0;
+    for (let k = 0; k < 4; k++) {
+      const sang = Math.random() * Math.PI * 2, srad = Math.random() * 1.2;
+      spawnParticle(player.x + Math.cos(sang) * srad, player.y + Math.sin(sang) * srad,
+        0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, 0,
+        0.6 + Math.random() * 0.4, [150, 150, 150], 3);
+    }
+  }
+  if (typeof crouching !== 'undefined' && crouching && gameStarted && !gameWon && !playerDead) runCrouchT += dt;
+  if (typeof TILE_MIRE !== 'undefined' && gameStarted && !gameWon && !playerDead) {
+    const mcx = Math.floor(player.x), mcy = Math.floor(player.y);
+    if (mapAt(mcx, mcy) === TILE_MIRE) {
+      const mkey = mcx + ',' + mcy;
+      if (mkey !== v4bLastMireCell) {
+        v4bLastMireCell = mkey;
+        runMireSteps++;
+        if (runMireSteps >= 15) unlockAchievement('mire_walker');
+      }
+    } else {
+      v4bLastMireCell = '';
+    }
+  }
   // v2.4：炮彈瞄準層開啟期間（玩家退出 pointer lock 用滑鼠點地圖）暫停敵人更新，
   // 避免玩家毫無防備被圍毆
   if (cannonAiming) return;
@@ -7578,8 +7855,41 @@ function updateEnemies(dt) {
       continue;
     }
 
+    /* v4.0：lancer 盾槍兵——方向性護盾。chase 時持續面向玩家、緩步直推、不橫移；
+       煙霧（smokeT>0）或失去視線時退回緩慢隨機巡邏。接觸傷害維持 18。 */
+    if (e.type === 'lancer') {
+      const lSee = smokeT <= 0 && distToPlayer < seeRange && enemyHasLOS(e.x, e.y, player.x, player.y);
+      if (lSee) {
+        e.state = 'chase';
+        const ang = Math.atan2(dy, dx);
+        e.dir = ang; // 持續面向玩家
+        const spd = e.speed * nightMult;
+        const mvx = Math.cos(ang) * spd * dt;
+        const mvy = Math.sin(ang) * spd * dt;
+        if (enemyCanMove(e.x + mvx, e.y)) e.x += mvx;
+        if (enemyCanMove(e.x, e.y + mvy)) e.y += mvy;
+      } else {
+        e.state = 'patrol';
+        e.patrolT -= dt;
+        if (e.patrolT <= 0) { e.dir = Math.random() * Math.PI * 2; e.patrolT = 2 + Math.random() * 2; }
+        const spd = e.speed * 0.4 * nightMult;
+        if (enemyCanMove(e.x + Math.cos(e.dir) * spd * dt, e.y)) e.x += Math.cos(e.dir) * spd * dt;
+        else e.patrolT = 0;
+        if (enemyCanMove(e.x, e.y + Math.sin(e.dir) * spd * dt)) e.y += Math.sin(e.dir) * spd * dt;
+        else e.patrolT = 0;
+      }
+      const lTouch = Math.hypot(player.x - e.x, player.y - e.y);
+      if (lTouch < 0.55 && e.attackCd <= 0) {
+        e.attackCd = 1.0;
+        damagePlayer(e.touchDmg, enemyDeathName(e));
+      }
+      continue;
+    }
+
     // 偵測玩家：距離 < seeRange 且有視線（夜晚提升、蹲下壓低）
-    const canSee = distToPlayer < seeRange && enemyHasLOS(e.x, e.y, player.x, player.y);
+    let canSee = distToPlayer < seeRange && enemyHasLOS(e.x, e.y, player.x, player.y);
+    // v4.0：煙霧彈生效期間，一般敵人失去對玩家的主動視線（接觸傷害仍可）
+    if (smokeT > 0) { canSee = false; e.state = (e.state === 'chase' && distToPlayer > seeRange + 3) ? 'patrol' : e.state; }
 
     if (e.state === 'patrol') {
       if (canSee) e.state = 'chase';
@@ -7641,7 +7951,8 @@ function updateEnemies(dt) {
 
 // 敵人類型 → 中文名稱（用於死亡原因）
 function enemyDeathName(e) {
-  switch (e.type) {
+  const t = (typeof e === 'string') ? e : e.type; // 向後相容：允許直接傳 type 字串
+  switch (t) {
     case 'boss': return '迷宮守護者 (Boss)';
     case 'shooter': return '遠程射手';
     case 'tank': return '裝甲坦克';
@@ -7655,6 +7966,8 @@ function enemyDeathName(e) {
     case 'echo': return '迴聲巫妖';
     case 'clone': return '迴聲分身';
     case 'miner': return '地雷蟲';
+    case 'lancer': return '盾槍兵'; // v4.0
+    case 'goblin': return '寶箱哥布林'; // v4.0
     case 'chaser':
     default: return '追蹤者';
   }
@@ -7703,6 +8016,19 @@ function playerAttack() {
       // tank 護甲減傷；終擊 x2 + 擊退
       let dmg = baseDmg;
       if (e.type === 'tank') dmg = Math.min(dmg, 15);
+      // v4.0：盾槍兵方向性護盾——angToE（玩家→敵人）與 e.dir（面朝）夾角 <70° 視為正面格擋至 1 傷
+      if (e.type === 'lancer') {
+        let ld = angToE - e.dir;
+        while (ld > Math.PI) ld -= Math.PI * 2;
+        while (ld < -Math.PI) ld += Math.PI * 2;
+        if (Math.abs(ld) * 180 / Math.PI < 70) {
+          dmg = Math.min(dmg, 1);
+          const now = performance.now() / 1000;
+          if (now >= lancerBlockToastCd) { lancerBlockToastCd = now + 0.5; showFloatText('格擋', '#d4af37'); }
+        } else {
+          e._backstabLanded = true; // 從側/背命中（破盾者成就計數）
+        }
+      }
       if (isFinisher) {
         dmg *= 2;
         // 擊退
@@ -7739,11 +8065,12 @@ function gainXP(amount) {
   // 連擊經驗倍率：×(1+0.10×comboCount)，上限 ×2
   const xpMult = Math.min(2, 1 + 0.10 * comboCount);
   runXP.xp += amount * xpMult;
-  let need = runXP.level * 50;
+  // v4.0 C7：升級經驗曲線 50*level^1.25，高級升級略放慢
+  let need = Math.round(50 * Math.pow(runXP.level, 1.25));
   while (runXP.xp >= need) {
     runXP.xp -= need;
     runXP.level++;
-    need = runXP.level * 50;
+    need = Math.round(50 * Math.pow(runXP.level, 1.25));
     // 升級獎勵
     player.hp = Math.min(player.maxHp, player.hp + 20);
     player.maxHp += 5;
@@ -7821,6 +8148,7 @@ function playerShoot() {
 function tryDash() {
   if (playerDead || gameWon || paused) return;
   if (dashState.cd > 0 || dashState.active > 0) return;
+  if (underMireTile()) { showToast('積水太深，無法衝刺！'); return; } // v4.0：腳下積水→衝刺失敗
   dashHitSet.clear(); // v2.8：新一次衝刺開始，重置命中表
   dashState.active = DASH_TIME;
   dashState.cd = DASH_CD;
@@ -7828,6 +8156,7 @@ function tryDash() {
   dashState.dirY = Math.sin(player.dir);
   dashState.dist = DASH_DIST;   // 剩餘衝刺距離（撞牆立即停止）
   dashState.used++;
+  runDashUsed = true; // v4.0：no_dash_win 成就追蹤（本局用過衝刺）
   setAchProgress('dash_master', dashState.used);
   buffs.invincible = Math.max(buffs.invincible, DASH_TIME); // 衝刺無敵
   playDash();
@@ -8715,6 +9044,8 @@ function update(dt) {
   updateBloodMoon(dt);
   updateMeteorEvent(dt); // v3.0
   updateEclipseEvent(dt); // v3.0
+  updateGoblinEvent(dt); // v4.0：寶箱哥布林
+  updateEndlessWaves(dt); // v4.0：無盡波次
   // 日夜循環推進（血月期間暫停推進，但仍依當前 dayTime 渲染光線）
   if (settings.dayNightCycle && !gameWon && !bloodMoonActive) {
     dayTime = (dayTime + dt / DAY_LENGTH) % 1;
@@ -8790,7 +9121,10 @@ function update(dt) {
   else if (settings.weather === 'snow') envMult = 0.92; // 雪地略滑
   else if (settings.weather === 'sand') envMult = 0.8;  // 沙塵中步履蹣跚
   const crouchMult = crouching ? 0.5 : 1.0;
-  const speedMult = (buffs.speed > 0 ? 1.5 : 1.0) * envMult * crouchMult;
+  // v4.0：積水地形——一般踏入減速 0.5×；蹲下潛行穿過積水為 0.75×（不與蹲下減速疊乘）
+  const mireMult = underMireTile() ? (crouching ? 0.75 : 0.5) : 1.0;
+  const baseSpeedMult = (buffs.speed > 0 ? 1.5 : 1.0) * envMult;
+  const speedMult = baseSpeedMult * (underMireTile() ? mireMult : crouchMult);
   const speed = (running ? player.moveSpeed * 1.8 : player.moveSpeed) * speedMult * dt;
   const rs = player.rotSpeed * dt;
 
@@ -8885,6 +9219,20 @@ function update(dt) {
       stepTimer = running ? 0.25 : 0.4;
     }
   }
+  // v4.0：踏入積水行走——每 0.5 秒噴 3 顆水泡粒子（離開積水即重置計時）
+  if (underMireTile() && movedDist > 0.0001) {
+    mireStepT -= dt;
+    if (mireStepT <= 0) {
+      mireStepT = 0.5;
+      for (let b = 0; b < 3; b++) {
+        spawnParticle(player.x + (Math.random() - 0.5) * 0.4, player.y + (Math.random() - 0.5) * 0.4, 0.1,
+          (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, 0.6 + Math.random() * 0.4,
+          0.6, [120, 180, 210], 2.5);
+      }
+    }
+  } else {
+    mireStepT = 0;
+  }
   const targetBob = (movedDist > 0.0001 && !settings.reduceMotion) ? Math.sin(bobPhase) * (running ? 0.04 : 0.02) : 0;
   bobOffset += (targetBob - bobOffset) * Math.min(1, dt * 10);
 
@@ -8896,8 +9244,8 @@ function update(dt) {
   checkDoors();
   checkItems();
 
-  // 勝利判定：到達終點
-  if (!gameWon && !playerDead) {
+  // 勝利判定：到達終點（v4.0：無盡模式不判定通關）
+  if (!gameWon && !playerDead && !settings.endlessMode) {
     const distToEnd = Math.sqrt((player.x - END.x) ** 2 + (player.y - END.y) ** 2);
     if (distToEnd < 0.6) {
       gameWon = true;
@@ -9147,6 +9495,25 @@ function updateItemBar() {
     document.getElementById('item-recall-count').textContent = itemInv.recall;
     rcBtn.style.display = itemInv.recall > 0 ? '' : 'none';
   }
+  // v4.0：煙霧彈格（動態建立，重用既有 item-btn 樣式；若 C 代理已加靜態 DOM 則直接沿用）
+  let smokeBtn = document.getElementById('item-smoke');
+  if (!smokeBtn) {
+    const bar = document.getElementById('item-bar');
+    if (bar) {
+      smokeBtn = document.createElement('button');
+      smokeBtn.id = 'item-smoke';
+      smokeBtn.className = 'item-btn';
+      smokeBtn.title = '煙霧彈：產生 5 秒煙霧，敵人失去視線不再主動追蹤（數字鍵 6）';
+      smokeBtn.innerHTML = '<span class="item-name">煙霧</span><span class="item-count" id="item-smoke-count">0</span>';
+      smokeBtn.addEventListener('pointerdown', (ev) => { ev.preventDefault(); useSmokeBomb(); });
+      bar.appendChild(smokeBtn);
+    }
+  }
+  if (smokeBtn) {
+    const scnt = document.getElementById('item-smoke-count');
+    if (scnt) scnt.textContent = itemInv.smoke;
+    smokeBtn.style.display = itemInv.smoke > 0 ? '' : 'none';
+  }
 }
 
 // 護盾：5 秒免疫傷害
@@ -9216,6 +9583,26 @@ function useFrostGrenade() {
   }
   playItemPickup('shield');
   if (!autoPlay) showToast('冰霜手雷！半徑 3 格敵人凍結 2 秒');
+}
+
+// v4.0：煙霧彈——全域 5 秒煙霧，敵人失去主動視線（接觸傷害仍可）
+function useSmokeBomb() {
+  if (itemInv.smoke <= 0) return;
+  if (playerDead || gameWon || paused) return;
+  itemInv.smoke--;
+  runUsedItems.add('smoke_bomb');
+  runSmokeUsed++;
+  if (runSmokeUsed >= 10) unlockAchievement('smoke_master');
+  smokeT = 5;
+  updateItemBar();
+  for (let i = 0; i < 20; i++) {
+    const ang = Math.random() * Math.PI * 2, rad = Math.random() * 1.2;
+    spawnParticle(player.x + Math.cos(ang) * rad, player.y + Math.sin(ang) * rad,
+      0.2 + Math.random() * 0.4, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, 0,
+      0.8 + Math.random() * 0.5, [150, 150, 150], 3.5);
+  }
+  if (!autoPlay) showToast('煙霧彈！5 秒內敵人失去對你的視線');
+  playItemPickup('shield');
 }
 
 // v3.0：回溯捲軸——立即回到最後一個寶石檢查點，消耗 1
@@ -9394,6 +9781,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === '3') useCannonItem();
   else if (e.key === '4') useFrostGrenade(); // v3.0
   else if (e.key === '5') useRecallScroll();  // v3.0
+  else if (e.key === '6') useSmokeBomb(); // v4.0 煙霧彈
 });
 
 // 道具拾取
@@ -9485,6 +9873,11 @@ function applyItem(type) {
     itemInv.recall++;
     updateItemBar();
     showToast('獲得回溯捲軸！數字鍵 5 回到最後寶石檢查點');
+  } else if (type === 'smoke_bomb') {
+    // v4.0：煙霧彈——庫存式戰鬥道具（數字鍵 6），產生 5 秒煙霧破壞敵人視線
+    itemInv.smoke++;
+    updateItemBar();
+    showToast('獲得煙霧彈！數字鍵 6 釋放煙霧，5 秒內敵人失去對你的視線');
   }
   updateBuffsHUD();
 }
@@ -9900,11 +10293,13 @@ function getBestTime() {
     // 最佳紀錄依迷宮尺寸分開儲存，避免小地圖紀錄汙染大地圖
     const key = BEST_KEY + '_' + (useRandomMaze ? selectedMazeSize : 'custom');
     const v = parseFloat(localStorage.getItem(key));
-    return isNaN(v) ? null : v;
+    // v4.0 F1：localStorage 被篡改時不顯示負/零最佳紀錄
+    return (isNaN(v) || v <= 0) ? null : v;
   } catch (e) { return null; }
 }
 function setBestTime(t) {
   try {
+    if (!(t > 0)) return; // v4.0 F1：只接受正數秒數
     const key = BEST_KEY + '_' + (useRandomMaze ? selectedMazeSize : 'custom');
     localStorage.setItem(key, String(t));
   } catch (e) {}
@@ -9922,6 +10317,16 @@ function showWinScreen() {
   // v3.3：每日迷宮連續打卡——先計算連續天數（測試模式不寫入）
   let dailyStreakShown = 0;
   if (!testMode && settings.dailyMode) dailyStreakShown = recordDailyStreakWin();
+  // v4.0：無盡模式——結算顯示存活波次
+  if (settings.endlessMode) {
+    winStats.innerHTML = `你撐過了 <span style="color:#fc0;">${endlessWave}</span> 波！<br>存活時間 <span>${formatTime(gameElapsed)}</span><br>擊殺 <span style="color:#fa5;">${runKills}</span>`;
+    winScreen.style.display = 'flex';
+    clearKeys();
+    if (document.pointerLockElement) document.exitPointerLock();
+    startFireworks();
+    if (!testMode) recordRunEnd(true);
+    return;
+  }
   let html = `用時 <span>${formatTime(gameElapsed)}</span><br>`;
   html += `最佳紀錄 <span>${formatTime(best)}</span><br>`;
   html += `等級 <span style="color:#6fd;">Lv.${runXP.level}</span>　擊殺 <span style="color:#fa5;">${runKills}</span>　寶石 <span style="color:#4ff;">${gemsCollected}/${gemsTotal}</span><br>`;
@@ -9986,6 +10391,11 @@ function showWinScreen() {
       if (dailyStreakShown >= 3) unlockAchievement('daily_streak3');
       if (dailyStreakShown >= 7) unlockAchievement('daily_streak7');
     }
+    // v4.0：無衝刺通關 / 蹲下潛行通關（run* 追蹤變數由 B 代理宣告，防護未就緒）
+    const _noDashUsed = (typeof runDashUsed !== 'undefined') ? !runDashUsed : (dashState.used === 0);
+    if (_noDashUsed) unlockAchievement('no_dash_win');
+    const _crouchRatio = (typeof runCrouchT !== 'undefined' && gameElapsed > 0) ? (runCrouchT / gameElapsed) : 0;
+    if (_crouchRatio > 0.5) unlockAchievement('crouch_win');
     // 記錄最高等級
     stats.highestLevel = Math.max(stats.highestLevel || 1, highestLevelEver);
     saveStats();
@@ -10047,7 +10457,7 @@ function resetGameState() {
   const useCustom = customEntities && customEntities.length && !useRandomMaze;
   if (useCustom) {
     spawnCustomEntities();
-  } else {
+  } else if (!settings.endlessMode) { // v4.0：無盡模式不生成寶石
     generateGems();
   }
   // 重置戰鬥/生命值
@@ -10106,6 +10516,10 @@ function resetGameState() {
   // 生成陷阱、鎖門鑰匙、敵人、道具（自訂實體模式則由實體決定）
   if (useCustom) {
     spawnCustomEntityActors();
+  } else if (settings.endlessMode) {
+    // v4.0：無盡模式——無寶石門鑰/常駐敵人，改由波次系統生成；終點移出地圖
+    END = { x: -100, y: -100 };
+    startEndlessWaves();
   } else {
     generateTraps();
     generateDoorsAndKeys();
@@ -10130,6 +10544,9 @@ function resetGameState() {
   meteorActive = false; meteorT = 0; meteorRollCd = 0; meteorWarnEdgeT = 0; meteorStrikes = []; meteorEverOn = false;
   eclipseActive = false; eclipseT = 0; eclipseRollCd = 0; eclipseEverOn = false;
   minerPlacedCount = 0;
+  // v4.0：重置寶箱哥布林與無盡波次狀態（endlessWaveT 在非無盡局不會被 startEndlessWaves 呼叫，故在此統一歸 4）
+  goblinSpawned = false; goblinRollT = 0; goblinRef = null;
+  endlessWave = 0; endlessWaveT = 4;
   bobPhase = 0; bobOffset = 0;
   shakeTime = 0;
   stepTimer = 0;
@@ -10152,6 +10569,11 @@ function resetGameState() {
   stepAccum = 0;
   runDamaged = false;
   wonByAuto = false;
+  // v4.0：本局追蹤變數重置（煙霧彈/積水/哥布林/蹲下/衝刺/盾槍兵背刺成就）
+  smokeT = 0; runBackstabKills = 0; runSmokeUsed = 0; runMireSteps = 0;
+  runGoblinKills = 0; runCrouchT = 0; runDashUsed = false;
+  if (typeof v4bLastMireCell !== 'undefined') v4bLastMireCell = '';
+  if (itemInv) itemInv.smoke = 0; // itemInv 上方已重新指派為不含 smoke 的物件，此處補回歸零
 }
 
 restartBtn.addEventListener('click', () => {
@@ -10393,6 +10815,8 @@ function syncSettingsUI() {
   if (mtSel) mtSel.value = (settings.meteorEvent !== false) ? 'on' : 'off';
   const ecSel = document.getElementById('set-eclipse');
   if (ecSel) ecSel.value = (settings.eclipseEvent !== false) ? 'on' : 'off';
+  const gbSel = document.getElementById('set-goblin'); // v4.0
+  if (gbSel) gbSel.value = (settings.goblinEvent !== false) ? 'on' : 'off';
   document.getElementById('set-autoquality').value = settings.autoQuality ? 'on' : 'off';
   document.getElementById('set-learning').value = settings.learningMode ? 'on' : 'off';
   document.getElementById('set-toastduration').value = String(settings.toastDuration || 1500);
@@ -10424,6 +10848,10 @@ document.getElementById('set-meteor').addEventListener('change', (e) => {
 document.getElementById('set-eclipse').addEventListener('change', (e) => {
   settings.eclipseEvent = (e.target.value === 'on'); saveSettings();
   if (!settings.eclipseEvent && eclipseActive) { eclipseActive = false; eclipseT = 0; }
+});
+// v4.0：寶箱哥布林事件開關
+document.getElementById('set-goblin').addEventListener('change', (e) => {
+  settings.goblinEvent = (e.target.value === 'on'); saveSettings();
 });
 document.getElementById('set-autoquality').addEventListener('change', (e) => {
   settings.autoQuality = (e.target.value === 'on'); saveSettings();
@@ -10651,8 +11079,8 @@ function sanitizeMapData(mapData) {
       if (!Array.isArray(mapData[y]) || mapData[y].length !== cols) return null;
       for (let x = 0; x < cols; x++) {
         const v = mapData[y][x];
-        // v2.5：tile 上限由 6 放寬至 8（7=冰面、8=崩落地板）
-        if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 8) return null;
+        // v2.5：tile 上限由 6 放寬至 8（7=冰面、8=崩落地板）；v4.0 放寬至 9（9=積水）
+        if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 9) return null;
       }
     }
     return { rows, cols };
@@ -10807,6 +11235,16 @@ function drawTileCell(g, v, px, py, cs) {
     g.lineTo(px + cs * 0.8, py + cs * 0.4);
     g.moveTo(px + cs * 0.5, py + cs * 0.55);
     g.lineTo(px + cs * 0.6, py + cs * 0.85);
+    g.stroke();
+  } else if (v === TILE_MIRE) {
+    // v4.0：積水——深青灰底 + 水面反光線條
+    g.fillStyle = '#3a5a6a';
+    g.fillRect(px, py, cs, cs);
+    g.strokeStyle = 'rgba(160,210,230,0.45)';
+    g.lineWidth = Math.max(1, cs * 0.05);
+    g.beginPath();
+    g.moveTo(px + cs * 0.15, py + cs * 0.35); g.lineTo(px + cs * 0.85, py + cs * 0.35);
+    g.moveTo(px + cs * 0.25, py + cs * 0.65); g.lineTo(px + cs * 0.75, py + cs * 0.65);
     g.stroke();
   } else {
     g.fillStyle = '#15151f';
@@ -11053,6 +11491,11 @@ function applyTool(cell, erase) {
     editor.map[y][x] = TILE_CRUMBLE;
     return;
   }
+  // v4.0：積水筆刷
+  if (editor.tool === 'mire') {
+    editor.map[y][x] = TILE_MIRE;
+    return;
+  }
 
   // 牆/擦除：依筆刷大小/形狀以當前格為中心
   const half = Math.floor(editor.brushSize / 2);
@@ -11123,7 +11566,8 @@ function updatePropsPanel() {
       ${opt('lurker','潛伏者')}
       ${opt('healer','治療術士')}
       ${opt('echo','迴聲巫妖')}/* v3.0 */
-      ${opt('miner','地雷蟲')}/* v3.0 */</select></div>`;
+      ${opt('miner','地雷蟲')}/* v3.0 */
+      ${opt('lancer','盾槍兵')}/* v4.0：金色盾槍兵 */</select></div>`;
   } else if (en.type === 'item') {
     const opt = (val, label) => `<option value="${val}" ${en.itemType===val?'selected':''}>${label}</option>`;
     html += `<div>類型 <select id="prop-item">
@@ -12438,6 +12882,15 @@ const ACH_DEFS = [
   { id: 'daily_streak3',     name: '三日打卡', desc: '每日迷宮連續完成 3 天', icon: '三', target: 3, rarity: 'normal' },
   { id: 'daily_streak7',     name: '週年打卡', desc: '每日迷宮連續完成 7 天', icon: '週', target: 7, rarity: 'hard' },
   { id: 'gem_scout',         name: '寶石雷達', desc: '單局收集 20 顆寶石', icon: '寶', target: 20, rarity: 'normal' },
+  // === v4.0 新成就（8 項：盾槍兵 / 煙霧彈 / 積水 / 哥布林 / 無盡 / 無衝刺 / 潛行） ===
+  { id: 'lancer_backstab',   name: '破盾者',   desc: '從背面擊殺 5 隻盾槍兵', icon: '盾', target: 5, rarity: 'normal' },
+  { id: 'smoke_master',      name: '煙霧大師', desc: '累計使用煙霧彈 10 次', icon: '霧', target: 10, rarity: 'normal' },
+  { id: 'mire_walker',        name: '泥沼行者', desc: '單局穿越 15 格積水', icon: '沼', target: 15, rarity: 'normal' },
+  { id: 'goblin_loot',        name: '哥布林剋星', desc: '擊殺 3 隻寶箱哥布林', icon: '哥', target: 3, rarity: 'normal' },
+  { id: 'endless_5',          name: '無盡倖存', desc: '無盡模式存活 5 波', icon: '無', target: 5, rarity: 'hard' },
+  { id: 'endless_10',         name: '迷宮深淵', desc: '無盡模式存活 10 波', icon: '淵', target: 10, rarity: 'extreme' },
+  { id: 'no_dash_win',        name: '腳踏實地', desc: '不使用衝刺通關', icon: '步', target: 1, rarity: 'normal' },
+  { id: 'crouch_win',         name: '潛行大師', desc: '蹲下時間超過 50% 通關', icon: '潛', target: 1, rarity: 'hard' },
 ];
 
 let achievements = {};
