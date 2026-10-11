@@ -5532,41 +5532,52 @@ function render() {
         const relX = (stripe - spriteScreenX) / (size / 2);
         const absRelX = Math.abs(relX);
         if (absRelX > 0.7) continue;
-        // 身體：上窄下寬的橢圓柱
+        // v4.1：實心人形剪影——頭（亮）+ 白眼睛 + 身體（暗）+ 深色描邊，遠看一眼就知道是敵人
         const halfH = size * 0.55;
         for (let y = Math.max(0, Math.floor(centerY - halfH)); y < Math.min(H, Math.floor(centerY + halfH)); y++) {
           const dyR = (y - centerY) / halfH;
-          // 頭部更亮
-          const headGlow = (dyR < -0.3) ? 0.3 : 0;
-          let glow = (1 - absRelX) * (0.6 - Math.abs(dyR) * 0.3);
-          // Boss 階段3 紅色光暈
-          if (e.type === 'boss' && e.hp < e.maxHp * 0.33) glow += 0.25;
+          if (Math.abs(dyR) > 1.0) continue;
+          // 區域判定：頭部 dyR<-0.3，眼睛在頭部偏上兩側
+          const isHead = dyR < -0.3;
+          const eyeL = isHead && relX < -0.12 && relX > -0.32 && Math.abs(dyR + 0.55) < 0.12;
+          const eyeR = isHead && relX >  0.12 && relX <  0.32 && Math.abs(dyR + 0.55) < 0.12;
+          const isEye = eyeL || eyeR;
           // v2.5：潛伏者未現身時透明度壓到 0.12~0.15（近乎隱形），現身則正常
-          let lurkerAlpha = 1.0;
-          if (e.type === 'lurker') lurkerAlpha = e.revealed ? 1.0 : 0.13;
+          let alpha = 1.0;
+          if (e.type === 'lurker') alpha = e.revealed ? 1.0 : 0.13;
           // v3.0：迴聲分身幻影：淡化半透明（約 0.45）
-          if (e.type === 'clone') lurkerAlpha = 0.45;
-          let a = Math.max(0, glow) * 0.9 * lurkerAlpha;
-          // v2.5：血月期間敵人眼睛發光——頭部區域疊加紅色高亮光點
+          if (e.type === 'clone') alpha = 0.45;
+          // Boss 階段3 紅色光暈（在身體邊緣加紅）
           let drawR = cr, drawG = cg, drawB = cb;
+          if (e.hitFlash > 0) { drawR = drawG = drawB = 255; }
+          else if (isEye) { drawR = drawG = drawB = 255; }
+          else {
+            // 頭部提亮、身體壓暗，拉出立體層次
+            if (isHead) {
+              drawR = Math.min(255, drawR * 1.25 + 25);
+              drawG = Math.min(255, drawG * 1.25 + 25);
+              drawB = Math.min(255, drawB * 1.25 + 25);
+            } else {
+              drawR *= 0.72; drawG *= 0.72; drawB *= 0.72;
+            }
+            // 邊緣深色描邊：左右側邊與頭頂/下巴，拉開與背景的層次
+            if (absRelX > 0.55 || dyR > 0.85) { drawR *= 0.35; drawG *= 0.35; drawB *= 0.35; }
+            // Boss 狂暴紅光
+            if (e.type === 'boss' && e.hp < e.maxHp * 0.33) { drawR = Math.min(255, drawR * 1.4); drawG *= 0.8; drawB *= 0.8; }
+          }
           // v3.0：冰霜凍結：冰藍色調覆蓋（e.freezeT>0）
-          if (e.freezeT > 0) {
+          if (e.freezeT > 0 && !isEye) {
             const fr = 0.6;
-            drawR = cr * (1 - fr) + 150 * fr;
-            drawG = cg * (1 - fr) + 210 * fr;
-            drawB = cb * (1 - fr) + 255 * fr;
+            drawR = drawR * (1 - fr) + 150 * fr;
+            drawG = drawG * (1 - fr) + 210 * fr;
+            drawB = drawB * (1 - fr) + 255 * fr;
           }
-          if (typeof bloodMoonActive !== 'undefined' && bloodMoonActive && dyR < -0.3) {
-            const eyeGlow = 0.55;
-            drawR = cr * (1 - eyeGlow) + 255 * eyeGlow;
-            drawG = cg * (1 - eyeGlow);
-            drawB = cb * (1 - eyeGlow);
-          }
+          // 血月：眼睛發紅（覆蓋白眼睛）
+          if (typeof bloodMoonActive !== 'undefined' && bloodMoonActive && isEye) { drawR = 255; drawG = 30; drawB = 30; }
           const pi = (y * W + stripe) * 4;
-          buf[pi]   = buf[pi]   * (1 - a) + drawR * a;
-          buf[pi+1] = buf[pi+1] * (1 - a) + drawG * a;
-          buf[pi+2] = buf[pi+2] * (1 - a) + drawB * a;
-          void headGlow;
+          buf[pi]   = buf[pi]   * (1 - alpha) + drawR * alpha;
+          buf[pi+1] = buf[pi+1] * (1 - alpha) + drawG * alpha;
+          buf[pi+2] = buf[pi+2] * (1 - alpha) + drawB * alpha;
         }
         // HP 條（在精靈頭頂）
         const barY = Math.max(0, Math.floor(centerY - halfH - 6));
