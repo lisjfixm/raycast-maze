@@ -2649,6 +2649,18 @@
       <button id="autoplay-btn" style="background:linear-gradient(135deg,#a4f,#82c);">AI 自動遊玩</button>
       <button id="ach-btn" style="background:linear-gradient(135deg,#c93,#960);">成就與統計</button>
     </div>
+    <div style="margin-top:6px; display:flex; align-items:center; gap:8px; justify-content:center;">
+      <label for="speed-select" style="font-size:13px; opacity:0.8;">AI 倍速</label>
+      <select id="speed-select" style="padding:4px 10px; border-radius:6px; background:#222; color:#fff; border:1px solid #444;">
+        <option value="0.5">0.5x（慢動作）</option>
+        <option value="1" selected>1x（正常）</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+        <option value="5">5x</option>
+        <option value="10">10x</option>
+        <option value="20">20x（極速）</option>
+      </select>
+    </div>
     <div id="start-info">版本 <span id="start-version">v3.3</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
   </div>
 
@@ -3563,6 +3575,9 @@ let lockEngageT = 0;  // pointer lock 由 false→true 的時間戳（用於過�
 let gameStarted = false;
 let gameStartTime = 0;
 let gameElapsed = 0;
+// v5.1：AI 自動運行倍速（0.5 / 1.5 / 2 / 5 / 10 / 20），1 = 正常
+let gameSpeedMult = 1;
+const SPEED_OPTIONS = [0.5, 1, 1.5, 2, 5, 10, 20];
 let paused = false;
 let pauseStartTime = 0;
 
@@ -7446,8 +7461,12 @@ function updateBossHUD() {
 
 // --- 提示訊息 ---
 let toastTimeout = null;
-function showToast(msg) {
-  const el = document.getElementById('toast-msg');
+// v5.1：倍速切換提示
+function showSpeedToast() {
+  try { showToast('速度 ' + gameSpeedMult + 'x'); } catch (e) {}
+}
+
+function showToast(msg) {  const el = document.getElementById('toast-msg');
   el.textContent = msg;
   el.classList.add('show');
   if (toastTimeout) clearTimeout(toastTimeout);
@@ -10208,6 +10227,19 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (!gameStarted || playerDead || gameWon || paused) return;
+  // v5.1：+/− 切換遊戲倍速（AI 觀看用）
+  if (e.key === '+' || e.key === '=') {
+    const i = SPEED_OPTIONS.indexOf(gameSpeedMult);
+    gameSpeedMult = SPEED_OPTIONS[Math.min(SPEED_OPTIONS.length - 1, i + 1)];
+    showSpeedToast();
+    return;
+  }
+  if (e.key === '-' || e.key === '_') {
+    const i = SPEED_OPTIONS.indexOf(gameSpeedMult);
+    gameSpeedMult = SPEED_OPTIONS[Math.max(0, i - 1)];
+    showSpeedToast();
+    return;
+  }
   if (e.key === '1') useShieldItem();
   else if (e.key === '2') useGrenadeItem();
   else if (e.key === '3') useCannonItem();
@@ -10367,25 +10399,35 @@ function formatTime(sec) {
 }
 
 function loop(now) {
-  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  const realDt = Math.min(0.05, (now - lastTime) / 1000);
   lastTime = now;
   frameNow = now; // 快取給 render / minimap / lighting 使用
 
+  // v5.1：AI 自動運行倍速。把 dt 拆成小步，避免高倍速單幀跳太多造成穿牆。
+  const speedMult = (typeof gameSpeedMult !== 'undefined') ? gameSpeedMult : 1;
+  const effDt = realDt * speedMult;
+  let steps = 1, subDt = effDt;
+  if (speedMult > 1.001) {
+    const SUB_STEP = 1 / 60;
+    steps = Math.max(1, Math.ceil(effDt / SUB_STEP));
+    subDt = effDt / steps;
+  }
+
   if (gameStarted) {
     if (!paused) {
-      update(dt);
-      updateParticles(dt);
+      for (let s = 0; s < steps; s++) update(subDt);
+      updateParticles(effDt);
       // 終點持續生成金色光塵
       if (!gameWon) {
-        endParticleTimer -= dt;
+        endParticleTimer -= effDt;
         if (endParticleTimer <= 0) {
           spawnEndDust();
           endParticleTimer = 0.12;
         }
       }
-      if (shakeTime > 0 && !settings.reduceMotion) shakeTime -= dt;
+      if (shakeTime > 0 && !settings.reduceMotion) shakeTime -= effDt;
     // 天氣更新
-    if (!paused) updateWeather(dt);
+    if (!paused) updateWeather(effDt);
     // 步數統計：每移動約一格記一步
     if (stepAccum > 0.3) {
       stats.totalSteps++;
@@ -10399,8 +10441,8 @@ function loop(now) {
   renderMinimap();
   updatePostFX();
   updateBossHUD();
-  updateDamageDir(dt); // v3.3：傷害方向弧形暗角衰減
-  updateBuffsHUDTick(dt); // v3.3：增益殘秒 0.1s 節流更新
+  updateDamageDir(effDt); // v3.3：傷害方向弧形暗角衰減
+  updateBuffsHUDTick(effDt); // v3.3：增益殘秒 0.1s 節流更新
 
     // 計時器更新（暫停與勝利時凍結）
     if (!paused && !gameWon) {
@@ -10433,7 +10475,7 @@ function loop(now) {
     }
   }
   frameCount++;
-  fpsTime += dt;
+  fpsTime += realDt;
   if (fpsTime >= 0.5) {
     const fps = Math.round(frameCount / fpsTime);
     fpsEl.textContent = `FPS: ${fps}`;
@@ -10664,9 +10706,12 @@ startBtn.addEventListener('click', () => {
 
 // --- 自動遊玩按鈕 ---
 const autoplayBtn = document.getElementById('autoplay-btn');
+const speedSelect = document.getElementById('speed-select');
 autoplayBtn.addEventListener('click', () => {
   startScreen.style.display = 'none';
   stopStartBg();
+  // v5.1：讀取倍速選項
+  gameSpeedMult = parseFloat(speedSelect.value) || 1;
   const bigMaze = ['enormous', 'gigantic', 'colossal', 'limitless'].includes(selectedMazeSize);
   if (bigMaze) showLoading('生成迷宮中...');
   requestAnimationFrame(() => {
