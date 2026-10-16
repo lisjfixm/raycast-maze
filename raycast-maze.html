@@ -2588,6 +2588,8 @@
       <button class="size-btn" data-size="gigantic">巨型</button>
       <button class="size-btn" data-size="colossal">浩瀚</button>
       <button class="size-btn" data-size="limitless">無邊</button>
+      <button class="size-btn" data-size="infinite">無盡</button>
+      <button class="size-btn" data-size="eternal">永劫</button>
     </div>
     <!-- v2.4：進階生成選項（環路率 / 走廊密度 / 鏡射對稱） -->
     <div class="size-label">進階生成</div>
@@ -2659,6 +2661,8 @@
         <option value="5">5x</option>
         <option value="10">10x</option>
         <option value="20">20x（極速）</option>
+        <option value="50">50x</option>
+        <option value="100">100x（飛速）</option>
       </select>
     </div>
     <div id="start-info">版本 <span id="start-version">v5.1</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
@@ -3577,7 +3581,7 @@ let gameStartTime = 0;
 let gameElapsed = 0;
 // v5.1：AI 自動運行倍速（0.5 / 1.5 / 2 / 5 / 10 / 20），1 = 正常
 let gameSpeedMult = 1;
-const SPEED_OPTIONS = [0.5, 1, 1.5, 2, 5, 10, 20];
+const SPEED_OPTIONS = [0.5, 1, 1.5, 2, 5, 10, 20, 50, 100];
 let paused = false;
 let pauseStartTime = 0;
 
@@ -3596,6 +3600,8 @@ const MAZE_SIZES = {
   gigantic:   { cols: 59, rows: 59, label: '巨型' },
   colossal:   { cols: 73, rows: 73, label: '浩瀚' },
   limitless:  { cols: 89, rows: 89, label: '無邊' },
+  infinite:   { cols: 107, rows: 107, label: '無盡' },
+  eternal:    { cols: 129, rows: 129, label: '永劫' },
 };
 let selectedMazeSize = 'medium';
 let useRandomMaze = true; // 預設每次遊玩自動生成
@@ -10691,7 +10697,7 @@ document.addEventListener('keydown', firstInteract);
 startBtn.addEventListener('click', () => {
   startScreen.style.display = 'none';
   stopStartBg();
-  const bigMaze = ['enormous', 'gigantic', 'colossal', 'limitless'].includes(selectedMazeSize);
+  const bigMaze = ['enormous', 'gigantic', 'colossal', 'limitless', 'infinite', 'eternal'].includes(selectedMazeSize);
   if (bigMaze) showLoading('生成迷宮中...');
   requestAnimationFrame(() => {
     gameStarted = true;
@@ -10712,7 +10718,7 @@ autoplayBtn.addEventListener('click', () => {
   stopStartBg();
   // v5.1：讀取倍速選項
   gameSpeedMult = parseFloat(speedSelect.value) || 1;
-  const bigMaze = ['enormous', 'gigantic', 'colossal', 'limitless'].includes(selectedMazeSize);
+  const bigMaze = ['enormous', 'gigantic', 'colossal', 'limitless', 'infinite', 'eternal'].includes(selectedMazeSize);
   if (bigMaze) showLoading('生成迷宮中...');
   requestAnimationFrame(() => {
     gameStarted = true;
