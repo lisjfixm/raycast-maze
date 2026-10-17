@@ -8637,7 +8637,8 @@ function teleporterOtherIdx(cx, cy) {
 // v2.4：模組層預配置最大尺寸（無邊迷宮 89×89=7921 格）尋路緩衝。
 // 每次規劃前 fill() 重用，避免大迷宮每次重規劃重新配置數個 TypedArray 造成 GC 壓力。
 // 注意：findPathRaw 為單線程 rAF 呼叫、無遞入並發，可安全共享。
-const PF_MAX_CELLS = 89 * 89;
+// v5.2：永劫迷宮 129×129=16641 格，緩衝區上限跟著放大
+const PF_MAX_CELLS = 129 * 129;
 const pfParentBuf = new Int32Array(PF_MAX_CELLS);
 const pfGScoreBuf = new Float32Array(PF_MAX_CELLS);
 const pfOpenFBuf = new Float32Array(PF_MAX_CELLS);
