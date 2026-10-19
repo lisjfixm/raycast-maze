@@ -1522,6 +1522,51 @@
   }
   body.crouching #crouch-hud { display: block; }
 
+  /* v6.0：潛入偵測度條——左緣細條，不擋視野 */
+  #stealth-detect-bar {
+    position: absolute;
+    top: 50%;
+    left: 6px;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 40vh;
+    background: rgba(255,255,255,0.12);
+    border-radius: 3px;
+    overflow: hidden;
+    z-index: 10;
+  }
+  #stealth-detect-inner {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: #7fd4ff;
+    transition: height 0.15s linear;
+  }
+  #stealth-detect-bar.alarm #stealth-detect-inner {
+    background: #f55;
+    animation: stealth-alarm-blink 0.5s steps(2) infinite;
+  }
+  @keyframes stealth-alarm-blink {
+    0% { opacity: 1; } 50% { opacity: 0.35; } 100% { opacity: 1; }
+  }
+  /* v6.0：獵殺剩餘獵物 chip——頂部小標籤 */
+  #hunt-prey-chip {
+    position: absolute;
+    top: calc(120px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--hud-bg);
+    border: 1px solid rgba(255,120,120,0.5);
+    border-radius: var(--hud-radius);
+    padding: 3px 12px;
+    font-size: var(--fs-sm);
+    color: #f99;
+    z-index: 10;
+    white-space: nowrap;
+  }
+
   /* ===== 傷害暗角 ===== */
   #damage-vignette {
     position: absolute;
@@ -2357,12 +2402,58 @@
     pointer-events: none; backdrop-filter: blur(3px);
   }
   #endless-wave-chip.show { display: block; animation: fade-in .3s ease-out both; }
+
+  /* --- v6.0：塔防 HUD（波次 chip + 家 HP 條） --- */
+  #td-wave-chip {
+    position: absolute; top: calc(4px + env(safe-area-inset-top)); left: 50%;
+    transform: translateX(-50%); z-index: 12; display: none;
+    padding: 2px 10px; border-radius: 999px;
+    background: rgba(44,24,20,0.55); border: 1px solid rgba(255,140,80,0.35);
+    color: rgba(255,210,170,0.85); font-size: 11px; letter-spacing: 2px; line-height: 1.4;
+    pointer-events: none; backdrop-filter: blur(3px);
+  }
+  #td-wave-chip.show { display: block; animation: fade-in .3s ease-out both; }
+  #td-home-hp {
+    position: absolute; top: calc(30px + env(safe-area-inset-top)); left: 50%;
+    transform: translateX(-50%); z-index: 12; display: none;
+    width: 160px; padding: 2px 8px; border-radius: 6px;
+    background: rgba(44,24,20,0.5); border: 1px solid rgba(255,140,80,0.25);
+    pointer-events: none; backdrop-filter: blur(3px);
+  }
+  #td-home-hp.show { display: block; }
+  #td-home-hp .td-home-label { color: rgba(255,200,160,0.8); font-size: 10px; text-align: center; line-height: 1.2; }
+  #td-home-hp .td-home-bar { height: 5px; margin-top: 2px; border-radius: 3px; background: rgba(0,0,0,0.4); overflow: hidden; }
+  #td-home-hp .td-home-fill { height: 100%; width: 100%; background: linear-gradient(90deg,#f66,#fa3); transition: width .2s; }
+
+  /* --- v6.0：密室逃脫 HUD（房間 chip + 謎題提示） --- */
+  #er-room-chip {
+    position: absolute; top: calc(4px + env(safe-area-inset-top)); left: 50%;
+    transform: translateX(-50%); z-index: 12; display: none;
+    padding: 2px 10px; border-radius: 999px;
+    background: rgba(20,30,44,0.55); border: 1px solid rgba(120,200,255,0.3);
+    color: rgba(180,220,255,0.85); font-size: 11px; letter-spacing: 2px; line-height: 1.4;
+    pointer-events: none; backdrop-filter: blur(3px);
+  }
+  #er-room-chip.show { display: block; animation: fade-in .3s ease-out both; }
+  #er-puzzle-hint {
+    position: absolute; bottom: calc(70px + env(safe-area-inset-bottom)); left: 50%;
+    transform: translateX(-50%); z-index: 12; display: none;
+    max-width: 80vw; padding: 4px 12px; border-radius: 6px;
+    background: rgba(16,24,36,0.6); border: 1px solid rgba(120,200,255,0.25);
+    color: rgba(200,230,255,0.9); font-size: 12px; line-height: 1.4; text-align: center;
+    pointer-events: none; backdrop-filter: blur(3px);
+  }
+  #er-puzzle-hint.show { display: block; animation: fade-in .3s ease-out both; }
 </style>
 </head>
 <body>
 <div id="game-container">
   <canvas id="game"></canvas>
   <div id="endless-wave-chip"></div>
+  <div id="td-wave-chip"></div>
+  <div id="td-home-hp"><div class="td-home-label">家 HP</div><div class="td-home-bar"><div class="td-home-fill"></div></div></div>
+  <div id="er-room-chip"></div>
+  <div id="er-puzzle-hint"></div>
   <div id="crosshair"></div>
   <div id="fps">FPS: --</div>
   <div id="res-state" style="display:none;"></div>
@@ -2398,6 +2489,12 @@
   <div id="buffs-hud"></div>
   <!-- 蹲下狀態指示 -->
   <div id="crouch-hud">蹲下潛行</div>
+  <!-- v6.0：潛入偵測度條（左緣細條，僅潛入模式顯示） -->
+  <div id="stealth-detect-bar" style="display:none;">
+    <div id="stealth-detect-inner"></div>
+  </div>
+  <!-- v6.0：獵殺剩餘獵物 chip（頂部，僅獵殺模式顯示） -->
+  <div id="hunt-prey-chip" style="display:none;">剩餘獵物 0</div>
   <!-- 傷害暗角 -->
   <div id="damage-vignette"></div>
   <!-- 後處理色偏覆蓋層 -->
@@ -2630,7 +2727,11 @@
       <button class="size-btn" data-mode="hardcore">一命</button>
       <button class="size-btn" data-mode="dailyMode">每日</button>
       <button class="size-btn" data-mode="endlessMode">無盡</button>
+      <button class="size-btn" data-mode="towerDefense">塔防</button>
+      <button class="size-btn" data-mode="escapeRoom">密室</button>
       <button class="size-btn" data-mode="gemHunter">寶石獵殺</button>
+      <button class="size-btn" data-mode="stealthMode">潛入</button>
+      <button class="size-btn" data-mode="huntMode">獵殺</button>
     </div>
     <div class="size-label">天氣</div>
     <div class="weather-row" id="weather-row">
@@ -3082,8 +3183,8 @@ const postfxOverlayEl = document.getElementById('postfx-overlay');
 const bossHudEl = document.getElementById('boss-hud');
 const bossBarInnerEl = document.getElementById('boss-bar-inner');
 const buffsHudEl = document.getElementById('buffs-hud');
-// v5.0：版本字串常數——開始畫面版本標籤統一引用此處，避免改版漏改
-const GAME_VERSION = 'v5.3';
+// v6.0：版本字串常數——開始畫面版本標籤統一引用此處，避免改版漏改
+const GAME_VERSION = 'v6.0';
 // v3.3：傷害方向指示 overlay（JS 建立，紅色弧形暗角依受擊方向轉向）
 const damageDirEl = document.createElement('div');
 damageDirEl.id = 'damage-dir';
@@ -3191,6 +3292,10 @@ const settings = {
   hardcore: false,           // v3.0：一命模式（死亡即結算回主選單）
   dailyMode: false,          // v3.0：每日迷宮（當日固定種子迷宮）
   endlessMode: false,        // v4.0：無盡波次模式（預設關）
+  towerDefense: false,      // v6.0：塔防模式（預設關）
+  escapeRoom: false,        // v6.0：密室逃脫模式（預設關）
+  stealthMode: false,       // v6.0：潛入模式（預設關）
+  huntMode: false,          // v6.0：獵殺模式（預設關）
 };
 function loadSettings() {
   try {
@@ -3263,6 +3368,10 @@ function loadSettings() {
   boolFix('hardcore', false);
   boolFix('dailyMode', false);
   boolFix('endlessMode', false); // v4.0
+  boolFix('towerDefense', false); // v6.0
+  boolFix('escapeRoom', false);   // v6.0
+  boolFix('stealthMode', false);  // v6.0
+  boolFix('huntMode', false);     // v6.0
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
@@ -4183,6 +4292,585 @@ function updateEndlessWaves(dt) {
   if (endlessWave === 5) unlockAchievement('endless_5');
   if (endlessWave === 10) unlockAchievement('endless_10');
 }
+
+// ========================================================================
+// v6.0 模式二：潛入 stealthMode —— 偷寶物到終點；偵測度/警報/被抓
+// v6.0 模式三：獵殺 huntMode —— 追殺 3-5 隻精英，殺夠才開出口
+// ========================================================================
+// ---- 潛入狀態 ----
+let stealthDetect = 0;          // 0-100 偵測度
+let stealthAlarm = false;       // 警報中（全體敵人 chase 15 秒）
+let stealthAlarmT = 0;          // 警報剩餘秒數
+let stealthTreasureTaken = false; // 寶物是否已偷
+let stealthCaught = 0;          // 被抓次數（滿 3 失敗）
+let stealthTreasure = null;      // 寶物座標 {x,y}
+let stealthCatchCd = 0;         // 被抓冷卻（避免同一幀連續觸發）
+let stealthHintedEnd = false;   // 到終點但未偷寶物的提示只顯示一次
+const STEALTH_SEE_RANGE = 8;    // 潛入模式敵人偵測距離
+// ---- 獵殺狀態 ----
+let huntQuota = 0;              // 實際生成的精英數（= 需擊殺數）
+let huntKills = 0;              // 已擊殺精英數
+let huntElites = [];            // 精英獵物參照列表
+
+// 在迷宮中找離起點最遠的可行走格（作為潛入寶物位置）
+function findStealthTreasureCell() {
+  const sx = Math.floor(START.x), sy = Math.floor(START.y);
+  const ex = Math.floor(END.x), ey = Math.floor(END.y);
+  let best = null, bestD = -1;
+  for (let y = 2; y < MAP_H - 2; y++) {
+    for (let x = 2; x < MAP_W - 2; x++) {
+      if (!isWalkable(MAP[y][x])) continue;
+      if (x === sx && y === sy) continue;
+      if (x === ex && y === ey) continue;
+      const d = (x - sx) * (x - sx) + (y - sy) * (y - sy);
+      if (d > bestD) { bestD = d; best = { x: x + 0.5, y: y + 0.5 }; }
+    }
+  }
+  return best || { x: END.x, y: END.y };
+}
+
+function startStealth() {
+  stealthDetect = 0;
+  stealthAlarm = false;
+  stealthAlarmT = 0;
+  stealthTreasureTaken = false;
+  stealthCaught = 0;
+  stealthCatchCd = 0;
+  stealthHintedEnd = false;
+  stealthTreasure = findStealthTreasureCell();
+}
+
+function startHunt() {
+  huntKills = 0;
+  huntElites = [];
+  // 從 generateEnemies 已生成的常駐敵人中，選 3-5 隻升級為精英
+  const pool = enemies.filter(e => e.state !== 'dead' && e.type !== 'boss');
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const n = Math.min(3 + Math.floor(Math.random() * 3), pool.length, 5); // 3-5 隻
+  for (let i = 0; i < n; i++) {
+    const e = pool[i];
+    e.maxHp = Math.max(1, Math.round(e.maxHp * 2));
+    e.hp = e.maxHp;
+    e.speed = e.speed * 1.25;
+    e.isElite = true;
+    huntElites.push(e);
+  }
+  huntQuota = huntElites.length;
+}
+
+// 潛入每幀推進：偵測度、警報、偷寶物、被抓、勝利
+function updateStealth(dt) {
+  if (!settings.stealthMode) { updateStealthHUD(); return; }
+  if (!gameStarted || gameWon || playerDead || paused) { updateStealthHUD(); return; }
+
+  // 1) 偵測：是否被任一敵人看見（重用 enemyHasLOS）
+  let seenByAny = false;
+  let seenByChaser = false;
+  for (const e of enemies) {
+    if (e.state === 'dead') continue;
+    const d = Math.hypot(player.x - e.x, player.y - e.y);
+    if (d < STEALTH_SEE_RANGE && enemyHasLOS(e.x, e.y, player.x, player.y)) {
+      seenByAny = true;
+      if (e.state === 'chase') seenByChaser = true;
+    }
+  }
+
+  // 2) 偵測度增減：未被看見 -4/s；被看見 +18/s（已在追 +10/s）
+  if (stealthAlarm) {
+    // 警報中：全體敵人強制 chase；偵測度緩降讓玩家有機會解除
+    stealthAlarmT -= dt;
+    for (const e of enemies) { if (e.state !== 'dead') e.state = 'chase'; }
+    stealthDetect -= (seenByAny ? 0 : 6) * dt;
+    if (stealthAlarmT <= 0) { stealthAlarm = false; stealthAlarmT = 0; if (!autoPlay) showToast('警報解除'); }
+  } else {
+    if (seenByAny) stealthDetect += (seenByChaser ? 10 : 18) * dt;
+    else stealthDetect -= 4 * dt;
+  }
+  stealthDetect = Math.max(0, Math.min(100, stealthDetect));
+
+  // 3) 偵測度滿 → 警報（全圖敵人 15 秒 chase）
+  if (stealthDetect >= 100 && !stealthAlarm) {
+    stealthAlarm = true;
+    stealthAlarmT = 15;
+    for (const e of enemies) { if (e.state !== 'dead') e.state = 'chase'; }
+    showFloatText('警報！', '#f55');
+    if (!autoPlay) showToast('警報！');
+  }
+
+  // 4) 偷寶物：走到寶物格上
+  if (!stealthTreasureTaken && stealthTreasure) {
+    if (Math.hypot(player.x - stealthTreasure.x, player.y - stealthTreasure.y) < 0.6) {
+      stealthTreasureTaken = true;
+      showFloatText('取得寶物！趕緊逃出！', '#fd4');
+      if (!autoPlay) showToast('寶物到手！終點已開啟');
+    }
+    // 寶物視覺：週期性金色光塵（重用粒子環狀池）
+    if (Math.random() < 0.3) {
+      spawnParticle(stealthTreasure.x + (Math.random()-0.5)*0.5, stealthTreasure.y + (Math.random()-0.5)*0.5,
+        0.5, 0, 0, 1.2, 0.6, [255, 215, 80], 3);
+    }
+  }
+
+  // 5) 被抓：敵人接觸 → stealthCaught++，遣返回起點；滿 3 失敗
+  if (stealthCatchCd > 0) stealthCatchCd -= dt;
+  if (stealthCatchCd <= 0) {
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      if (Math.hypot(player.x - e.x, player.y - e.y) < 0.6) {
+        stealthCaught++;
+        stealthCatchCd = 2.5;
+        stealthDetect = 0;
+        if (stealthCaught >= 3) {
+          checkpoint = null;           // 避免 die() 走檢查點復活
+          lastDamageCause = '已被抓獲';
+          player.hp = 0;
+          die();
+        } else {
+          if (!autoPlay) showToast('被抓！(' + stealthCaught + '/3) 遣返回起點');
+          player.x = START.x; player.y = START.y;
+          player.hp = player.maxHp;
+          invulnTimer = 2;
+        }
+        break;
+      }
+    }
+  }
+
+  // 6) 勝利：偷到寶物且到終點
+  if (stealthTreasureTaken && !gameWon) {
+    if (Math.hypot(player.x - END.x, player.y - END.y) < 0.6) {
+      gameWon = true; playWin(); showWinScreen();
+    }
+  } else if (!stealthTreasureTaken && !stealthHintedEnd) {
+    // 未偷寶物到終點附近：提示一次
+    if (Math.hypot(player.x - END.x, player.y - END.y) < 2.0) {
+      stealthHintedEnd = true;
+      showFloatText('出口封鎖：先偷寶物！', '#f88');
+    }
+  }
+
+  updateStealthHUD();
+}
+
+// 獵殺每幀推進：重算擊殺數、勝利判定
+function updateHunt(dt) {
+  if (!settings.huntMode) { updateHuntHUD(); return; }
+  if (!gameStarted || gameWon || playerDead || paused) { updateHuntHUD(); return; }
+  huntKills = huntElites.filter(e => e.state === 'dead').length;
+  if (huntKills >= huntQuota && !gameWon) {
+    if (Math.hypot(player.x - END.x, player.y - END.y) < 0.6) {
+      gameWon = true; playWin(); showWinScreen();
+    }
+  }
+  updateHuntHUD();
+}
+
+// HUD：偵測條（僅潛入模式顯示）
+let stealthBarInnerEl = null;
+function updateStealthHUD() {
+  const bar = document.getElementById('stealth-detect-bar');
+  if (!bar) return;
+  if (!settings.stealthMode) { bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  if (!stealthBarInnerEl) stealthBarInnerEl = document.getElementById('stealth-detect-inner');
+  if (stealthBarInnerEl) stealthBarInnerEl.style.width = Math.round(stealthDetect) + '%';
+  bar.classList.toggle('alarm', !!stealthAlarm);
+}
+
+// HUD：剩餘獵物 chip（僅獵殺模式顯示）
+let huntChipEl = null;
+function updateHuntHUD() {
+  if (!huntChipEl) huntChipEl = document.getElementById('hunt-prey-chip');
+  if (!huntChipEl) return;
+  if (!settings.huntMode) { huntChipEl.style.display = 'none'; return; }
+  huntChipEl.style.display = 'block';
+  huntChipEl.textContent = '剩餘獵物 ' + Math.max(0, huntQuota - huntKills);
+}
+
+// ========================================================================
+// v6.0 模式一：塔防 towerDefense
+// ========================================================================
+let homeHP = 20;
+const homeMaxHP = 20;
+let tdWave = 0;
+let tdWaveT = 0;
+let tdEnemies = [];      // 塔防專用敵人（獨立於 enemies，避免既有 AI 干擾）
+let towers = [];         // {type, x, y, cd}
+let tdPath = [];         // 從巢穴到家的格徑 [{x,y},...]
+let tdNest = null;       // {x,y} 巢穴格
+let tdHome = null;       // {x,y} 家格
+let tdSelectedTower = 0; // 0=未選 1=槍 2=冰 3=砲
+let tdGameOver = false;
+
+// 在可行走格中找離 (fx,fy) 最遠的一格（作為巢穴/家）
+function tdFindFarWalkable(fx, fy) {
+  let best = null, bestD = -1;
+  for (let y = 1; y < MAP_H - 1; y++) {
+    for (let x = 1; x < MAP_W - 1; x++) {
+      if (!isWalkable(MAP[y][x])) continue;
+      const d = (x + 0.5 - fx) ** 2 + (y + 0.5 - fy) ** 2;
+      if (d > bestD) { bestD = d; best = { x, y }; }
+    }
+  }
+  return best;
+}
+
+function startTowerDefense() {
+  tdWave = 0;
+  tdWaveT = 5; // 開局 5 秒後第一波
+  tdEnemies = [];
+  towers = [];
+  homeHP = homeMaxHP;
+  tdGameOver = false;
+  tdSelectedTower = 0;
+  END = { x: -100, y: -100 }; // 塔防不判定終點
+  // 巢穴：離玩家最遠的格；家：離巢穴最遠的格
+  tdNest = tdFindFarWalkable(START.x, START.y);
+  tdHome = tdNest ? tdFindFarWalkable(tdNest.x + 0.5, tdNest.y + 0.5) : null;
+  tdPath = [];
+  if (tdNest && tdHome) {
+    const p = findPath(tdNest.x, tdNest.y, tdHome.x, tdHome.y);
+    if (p) tdPath = p;
+  }
+  // 顯示 HUD
+  const wc = document.getElementById('td-wave-chip');
+  const hp = document.getElementById('td-home-hp');
+  if (wc) { wc.textContent = '準備中...'; wc.classList.add('show'); }
+  if (hp) { hp.classList.add('show'); tdUpdateHomeHpHUD(); }
+  if (!autoPlay) showToast('塔防開始——守住家！按 1/2/3 選塔，F 放置');
+}
+
+function tdUpdateHomeHpHUD() {
+  const hp = document.getElementById('td-home-hp');
+  if (!hp) return;
+  const fill = hp.querySelector('.td-home-fill');
+  if (fill) fill.style.width = Math.max(0, (homeHP / homeMaxHP) * 100) + '%';
+  const lbl = hp.querySelector('.td-home-label');
+  if (lbl) lbl.textContent = '家 HP ' + Math.max(0, homeHP) + '/' + homeMaxHP;
+}
+
+function tdSpawnWave() {
+  tdWave++;
+  const count = tdWave + 2;
+  const hpMult = 1 + 0.15 * (tdWave - 1);
+  const wc = document.getElementById('td-wave-chip');
+  if (wc) wc.textContent = '第 ' + tdWave + ' 波';
+  if (tdPath.length < 2) return;
+  for (let i = 0; i < count; i++) {
+    tdEnemies.push({
+      x: tdNest.x + 0.5,
+      y: tdNest.y + 0.5,
+      hp: Math.round(30 * hpMult),
+      maxHp: Math.round(30 * hpMult),
+      speed: 1.2,            // 慢速行進
+      pathIndex: 0,
+      slowT: 0,
+      slowMult: 1,
+      reachedHome: false,
+    });
+  }
+  if (!autoPlay) showToast('第 ' + tdWave + ' 波來襲！');
+}
+
+// 程式放置塔（E2E 用）：type 'gun'|'ice'|'cannon'，col/row 格座標
+function tdPlaceTower(type, col, row) {
+  if (!settings.towerDefense) return false;
+  if (col < 0 || row < 0 || col >= MAP_W || row >= MAP_H) return false;
+  if (!isWalkable(MAP[row][col])) return false;
+  // 不疊塔
+  for (const t of towers) if (Math.floor(t.x) === col && Math.floor(t.y) === row) return false;
+  towers.push({ type, x: col + 0.5, y: row + 0.5, cd: 0 });
+  return true;
+}
+
+function updateTowerDefense(dt) {
+  if (!settings.towerDefense) return;
+  if (!gameStarted || gameWon || playerDead || paused || tdGameOver) return;
+  // 波次倒數
+  tdWaveT -= dt;
+  if (tdWaveT <= 0) {
+    tdWaveT = 15;
+    tdSpawnWave();
+  }
+  // 推進敵人沿路徑
+  for (const e of tdEnemies) {
+    if (e.reachedHome) continue;
+    if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowMult = 1; }
+    if (tdPath.length < 2) continue;
+    const target = tdPath[Math.min(e.pathIndex + 1, tdPath.length - 1)];
+    if (!target) { e.reachedHome = true; continue; }
+    const tx = target.x + 0.5, ty = target.y + 0.5;
+    const dx = tx - e.x, dy = ty - e.y;
+    const dist = Math.hypot(dx, dy);
+    const sp = e.speed * e.slowMult * dt;
+    if (dist <= sp) {
+      e.x = tx; e.y = ty;
+      e.pathIndex++;
+      if (e.pathIndex >= tdPath.length - 1) {
+        // 到家
+        e.reachedHome = true;
+        homeHP -= 1;
+        tdUpdateHomeHpHUD();
+        if (!autoPlay) showFloatText('家受攻擊！HP ' + homeHP, '#f66');
+      }
+    } else {
+      e.x += (dx / dist) * sp;
+      e.y += (dy / dist) * sp;
+    }
+  }
+  // 移除到家/死亡敵人
+  tdEnemies = tdEnemies.filter(e => !e.reachedHome && e.hp > 0);
+  // 塔攻擊
+  for (const t of towers) {
+    t.cd -= dt;
+    if (t.type === 'gun') {
+      // 射程 4，每秒 8 傷
+      if (t.cd <= 0) {
+        t.cd = 0.1; // 每 0.1s 打 0.8 傷 ≈ 每秒 8
+        let best = null, bd = 4;
+        for (const e of tdEnemies) {
+          const d = Math.hypot(e.x - t.x, e.y - t.y);
+          if (d <= bd) { bd = d; best = e; }
+        }
+        if (best) best.hp -= 0.8;
+      }
+    } else if (t.type === 'ice') {
+      // 射程 3，命中後速度 ×0.55 持續 1.5s
+      if (t.cd <= 0) {
+        t.cd = 0.5;
+        for (const e of tdEnemies) {
+          const d = Math.hypot(e.x - t.x, e.y - t.y);
+          if (d <= 3) { e.slowMult = 0.55; e.slowT = 1.5; }
+        }
+      }
+    } else if (t.type === 'cannon') {
+      // 射程 5，每 2.5s，半徑 1.5 爆炸 20 傷
+      if (t.cd <= 0) {
+        t.cd = 2.5;
+        let best = null, bd = 5;
+        for (const e of tdEnemies) {
+          const d = Math.hypot(e.x - t.x, e.y - t.y);
+          if (d <= bd) { bd = d; best = e; }
+        }
+        if (best) {
+          const ex = best.x, ey = best.y;
+          for (const e of tdEnemies) {
+            if (Math.hypot(e.x - ex, e.y - ey) <= 1.5) e.hp -= 20;
+          }
+        }
+      }
+    }
+  }
+  // 家 HP 歸零 → 失敗
+  if (homeHP <= 0 && !tdGameOver) {
+    tdGameOver = true;
+    lastDamageCause = '家被摧毀';
+    playerDead = true;
+    stopAutoPlay();
+    gameElapsed = (performance.now() - gameStartTime) / 1000;
+    recordRunEnd(false);
+    setTxtSafe('death-cause', '家被敵人攻陷（撐 ' + tdWave + ' 波）');
+    setTxtSafe('death-time', formatTime(gameElapsed));
+    setTxtSafe('death-kills', String(runKills));
+    setTxtSafe('death-gems', '0/0');
+    const ds = document.getElementById('death-stats');
+    if (ds) ds.innerHTML = `家 HP 歸零<br>撐過波次 <span style="color:#fa5;">${tdWave}</span><br>存活時間 <span>${formatTime(gameElapsed)}</span>`;
+    const dsc = document.getElementById('death-screen');
+    if (dsc) dsc.style.display = 'flex';
+    if (document.pointerLockElement) document.exitPointerLock();
+    clearKeys();
+  }
+  // 撐過 20 波 → 通關
+  if (tdWave >= 20 && !gameWon) {
+    gameWon = true;
+    playWin();
+    showWinScreen();
+  }
+}
+
+function setTxtSafe(id, v) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = v;
+}
+
+// ========================================================================
+// v6.0 模式二：密室逃脫 escapeRoom
+// ========================================================================
+let erRoomIndex = 1;       // 目前房間 1/2/3
+let erPuzzleState = 'idle'; // idle / active / solved
+let erSwitches = [];        // 開關 [{x,y,id,lit}]
+let erBox = null;           // 推箱 {x,y}
+let erPlate = null;         // 壓板 {x,y}
+let erP1Seq = [];           // 房間1 開關順序
+let erP1Progress = 0;
+let erP3Seq = [];           // 房間3 記憶序列
+let erP3Progress = 0;
+let erP3Flashing = 0;       // 閃燈倒數
+let erExitUnlocked = false;
+
+function startEscapeRoom() {
+  erRoomIndex = 1;
+  erPuzzleState = 'active';
+  erP1Progress = 0;
+  erP3Progress = 0;
+  erP3Flashing = 0;
+  erExitUnlocked = false;
+  erSwitches = [];
+  // 以 START 為基準，在附近可行走格放置謎題元件
+  const sx = Math.floor(START.x), sy = Math.floor(START.y);
+  // 找附近可行走格的輔助
+  function erNearWalkable(ox, oy) {
+    for (let r = 0; r < 6; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const x = sx + ox + dx, y = sy + oy + dy;
+          if (x > 0 && y > 0 && x < MAP_W - 1 && y < MAP_H - 1 && isWalkable(MAP[y][x])) {
+            return { x, y };
+          }
+        }
+      }
+    }
+    return { x: sx + ox, y: sy + oy };
+  }
+  // 房間1：3 個開關（放在玩家附近）
+  const s1 = erNearWalkable(2, 0);
+  const s2 = erNearWalkable(0, 2);
+  const s3 = erNearWalkable(-2, 0);
+  erSwitches.push({ x: s1.x, y: s1.y, id: 0, lit: false });
+  erSwitches.push({ x: s2.x, y: s2.y, id: 1, lit: false });
+  erSwitches.push({ x: s3.x, y: s3.y, id: 2, lit: false });
+  // 房間1 順序：隨機 0/1/2 排列
+  erP1Seq = [0, 1, 2].sort(() => Math.random() - 0.5);
+  // 房間2：壓板 + 箱子
+  const pl = erNearWalkable(3, 3);
+  erPlate = { x: pl.x, y: pl.y };
+  erBox = { x: pl.x - 1, y: pl.y };
+  // 房間3：記憶序列 3 燈（重用前 3 個開關的位置重新賦意）
+  erP3Seq = [0, 1, 2].sort(() => Math.random() - 0.5);
+  // 顯示 HUD
+  const rc = document.getElementById('er-room-chip');
+  const hint = document.getElementById('er-puzzle-hint');
+  if (rc) { rc.classList.add('show'); erUpdateHUD(); }
+  if (hint) hint.classList.add('show');
+  if (!autoPlay) showToast('密室開始——解開謎題逃出！');
+}
+
+function erUpdateHUD() {
+  const rc = document.getElementById('er-room-chip');
+  const hint = document.getElementById('er-puzzle-hint');
+  if (rc) {
+    if (erExitUnlocked) rc.textContent = '已解鎖出口';
+    else rc.textContent = '第 ' + erRoomIndex + ' 間';
+  }
+  if (hint) {
+    if (erExitUnlocked) hint.textContent = '出口已開——前往終點！';
+    else if (erRoomIndex === 1) hint.textContent = '按順序踩開關：閃燈 ' + erP1Seq.map(i => (i + 1)).join(' → ');
+    else if (erRoomIndex === 2) hint.textContent = '把箱子推到壓板上';
+    else if (erRoomIndex === 3) hint.textContent = '記憶燈序——按對應開關複述：' + erP3Seq.map(i => (i + 1)).join(' → ');
+  }
+}
+
+// 按開關 i（程式呼叫或走近自動觸發）
+function erPressSwitch(i) {
+  if (!settings.escapeRoom || erExitUnlocked) return;
+  if (erRoomIndex === 1) {
+    if (i === erP1Seq[erP1Progress]) {
+      erP1Progress++;
+      erSwitches[i].lit = true;
+      if (erP1Progress >= erP1Seq.length) {
+        erRoomIndex = 2;
+        erPuzzleState = 'active';
+        erUpdateHUD();
+        if (!autoPlay) showToast('第一間解開！');
+      } else erUpdateHUD();
+    } else {
+      erP1Progress = 0;
+      for (const s of erSwitches) s.lit = false;
+      if (!autoPlay) showToast('順序錯誤，重置');
+    }
+  } else if (erRoomIndex === 3) {
+    if (i === erP3Seq[erP3Progress]) {
+      erP3Progress++;
+      if (erP3Progress >= erP3Seq.length) {
+        erExitUnlocked = true;
+        erPuzzleState = 'solved';
+        erUpdateHUD();
+        if (!autoPlay) showToast('全部解開！出口已開！');
+      } else erUpdateHUD();
+    } else {
+      erP3Progress = 0;
+      if (!autoPlay) showToast('記憶錯誤，重試');
+      erUpdateHUD();
+    }
+  }
+}
+
+// 推箱：dir 'up'|'down'|'left'|'right'
+function erPushBox(dir) {
+  if (!settings.escapeRoom || erExitUnlocked) return;
+  if (erRoomIndex !== 2 || !erBox || !erPlate) return;
+  let dx = 0, dy = 0;
+  if (dir === 'up') dy = -1;
+  else if (dir === 'down') dy = 1;
+  else if (dir === 'left') dx = -1;
+  else if (dir === 'right') dx = 1;
+  const nx = erBox.x + dx, ny = erBox.y + dy;
+  if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return;
+  if (!isWalkable(MAP[ny][nx])) return;
+  erBox.x = nx; erBox.y = ny;
+  // 檢查是否壓到壓板
+  if (erBox.x === erPlate.x && erBox.y === erPlate.y) {
+    erRoomIndex = 3;
+    erUpdateHUD();
+    if (!autoPlay) showToast('第二間解開！');
+  }
+}
+
+function updateEscapeRoom(dt) {
+  if (!settings.escapeRoom) return;
+  if (!gameStarted || gameWon || playerDead || paused) return;
+  // 玩家走近開關自動觸發（距離 < 0.8）
+  if (erRoomIndex === 1 || erRoomIndex === 3) {
+    for (const s of erSwitches) {
+      const d = Math.hypot(player.x - (s.x + 0.5), player.y - (s.y + 0.5));
+      if (d < 0.7 && !s.lit) {
+        erPressSwitch(s.id);
+      }
+    }
+  }
+  // 玩家走近箱子自動推（朝向箱子方向）
+  if (erRoomIndex === 2 && erBox) {
+    const d = Math.hypot(player.x - (erBox.x + 0.5), player.y - (erBox.y + 0.5));
+    if (d < 0.9) {
+      // 由玩家相對位置決定推方向
+      const dx = erBox.x + 0.5 - player.x;
+      const dy = erBox.y + 0.5 - player.y;
+      let dir = null;
+      if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? 'right' : 'left';
+      else dir = dy > 0 ? 'down' : 'up';
+      erPushBox(dir);
+    }
+  }
+  // 出口解鎖後，玩家走到 END 附近 → 勝利
+  if (erExitUnlocked) {
+    const d = Math.hypot(player.x - END.x, player.y - END.y);
+    if (d < 0.8 && !gameWon) {
+      gameWon = true;
+      playWin();
+      showWinScreen();
+    }
+  }
+}
+
+// 暴露給 E2E 的全域 API（掛 window 方便 evaluate）
+window.tdPlaceTower = tdPlaceTower;
+window.tdState = () => ({ wave: tdWave, homeHP, towers: towers.length, enemies: tdEnemies.length, pathLen: tdPath.length });
+window.erPressSwitch = erPressSwitch;
+window.erPushBox = erPushBox;
+window.erState = () => ({ room: erRoomIndex, puzzle: erPuzzleState, unlocked: erExitUnlocked, p1Progress: erP1Progress, p3Progress: erP3Progress, box: erBox, plate: erPlate, switches: erSwitches });
 
 // --- 鑰匙 ---
 let keyItems = [];         // {x, y, collected, phase}
@@ -5683,6 +6371,8 @@ function render() {
       const drawEndX = Math.floor(beamWidth / 2 + spriteScreenX);
       const pulse = 0.5 + Math.sin(frameNow * 0.005) * 0.5;
       const allGemsDone = gemsTotal > 0 && gemsCollected >= gemsTotal;
+      // v6.0：潛入未偷寶物 / 獵殺未殺夠 → 出口光柱灰色（封鎖中）
+      const exitLocked = (settings.stealthMode && !stealthTreasureTaken) || (settings.huntMode && huntKills < huntQuota);
 
       for (let stripe = Math.max(0, drawStartX); stripe < Math.min(W, drawEndX); stripe++) {
         if (tY < zBuffer[stripe]) {
@@ -5695,7 +6385,13 @@ function render() {
             const a = alpha * vertFade;
             if (a <= 0.01) continue;
             const pi = (y * W + stripe) * 4;
-            if (allGemsDone) {
+            if (exitLocked) {
+              // 灰色封印光柱
+              const g = 120 + pulse * 30;
+              buf[pi]   = buf[pi]   * (1 - a) + g * a;
+              buf[pi+1] = buf[pi+1] * (1 - a) + g * a;
+              buf[pi+2] = buf[pi+2] * (1 - a) + g * a;
+            } else if (allGemsDone) {
               const hue = (y * 0.05 + frameNow * 0.02) % 360;
               const cr = Math.sin(hue * Math.PI / 180) * 0.5 + 0.5;
               const cg = Math.sin((hue + 120) * Math.PI / 180) * 0.5 + 0.5;
@@ -8366,26 +9062,30 @@ function updateEnemies(dt) {
 // 敵人類型 → 中文名稱（用於死亡原因）
 function enemyDeathName(e) {
   const t = (typeof e === 'string') ? e : e.type; // 向後相容：允許直接傳 type 字串
+  let name;
   switch (t) {
-    case 'boss': return '迷宮守護者 (Boss)';
-    case 'shooter': return '遠程射手';
-    case 'tank': return '裝甲坦克';
-    case 'swarm': return '蟲群 (Swarm)';
-    case 'bomber': return '炸彈兵';
-    case 'sentinel': return '旋轉哨兵';
-    case 'splitter': return '分裂體';
-    case 'lurker': return '潛伏者';
-    case 'healer': return '治療術士';
+    case 'boss': name = '迷宮守護者 (Boss)'; break;
+    case 'shooter': name = '遠程射手'; break;
+    case 'tank': name = '裝甲坦克'; break;
+    case 'swarm': name = '蟲群 (Swarm)'; break;
+    case 'bomber': name = '炸彈兵'; break;
+    case 'sentinel': name = '旋轉哨兵'; break;
+    case 'splitter': name = '分裂體'; break;
+    case 'lurker': name = '潛伏者'; break;
+    case 'healer': name = '治療術士'; break;
     // v3.0：新敵人中文名稱
-    case 'echo': return '迴聲巫妖';
-    case 'clone': return '迴聲分身';
-    case 'miner': return '地雷蟲';
-    case 'lancer': return '盾槍兵'; // v4.0
-    case 'goblin': return '寶箱哥布林'; // v4.0
-    case 'wraith': return '相位幽靈'; // v5.0
+    case 'echo': name = '迴聲巫妖'; break;
+    case 'clone': name = '迴聲分身'; break;
+    case 'miner': name = '地雷蟲'; break;
+    case 'lancer': name = '盾槍兵'; break; // v4.0
+    case 'goblin': name = '寶箱哥布林'; break; // v4.0
+    case 'wraith': name = '相位幽靈'; break; // v5.0
     case 'chaser':
-    default: return '追蹤者';
+    default: name = '追蹤者'; break;
   }
+  // v6.0：獵殺模式精英——名稱加前綴
+  if (typeof e !== 'string' && e && e.isElite) name = '精英' + name;
+  return name;
 }
 
 // --- 玩家近戰攻擊 ---
@@ -9473,6 +10173,10 @@ function update(dt) {
   updateGoldRushEvent(dt); // v5.0：豐收光環
   updateGemHunter(dt); // v5.0：寶石獵殺
   updateEndlessWaves(dt); // v4.0：無盡波次
+  updateTowerDefense(dt); // v6.0：塔防
+  updateEscapeRoom(dt);   // v6.0：密室逃脫
+  updateStealth(dt); // v6.0：潛入
+  updateHunt(dt);    // v6.0：獵殺
   // 日夜循環推進（血月期間暫停推進，但仍依當前 dayTime 渲染光線）
   if (settings.dayNightCycle && !gameWon && !bloodMoonActive) {
     dayTime = (dayTime + dt / DAY_LENGTH) % 1;
@@ -9689,7 +10393,7 @@ function update(dt) {
   checkItems();
 
   // 勝利判定：到達終點（v4.0：無盡模式不判定通關；v5.0：寶石獵殺不判定 END）
-  if (!gameWon && !playerDead && !settings.endlessMode && !settings.gemHunter) {
+  if (!gameWon && !playerDead && !settings.endlessMode && !settings.gemHunter && !settings.towerDefense && !settings.escapeRoom && !settings.stealthMode && !settings.huntMode) {
     const distToEnd = Math.sqrt((player.x - END.x) ** 2 + (player.y - END.y) ** 2);
     if (distToEnd < 0.6) {
       gameWon = true;
@@ -10246,6 +10950,31 @@ document.addEventListener('keydown', (e) => {
     gameSpeedMult = SPEED_OPTIONS[Math.max(0, i - 1)];
     showSpeedToast();
     return;
+  }
+  // v6.0：塔防模式——1/2/3 選塔型（覆蓋道具快捷鍵）
+  if (settings.towerDefense && gameStarted && !playerDead && !gameWon) {
+    if (e.key === '1') { tdSelectedTower = 1; showToast('已選：火槍塔'); return; }
+    if (e.key === '2') { tdSelectedTower = 2; showToast('已選：冰凍塔'); return; }
+    if (e.key === '3') { tdSelectedTower = 3; showToast('已選：砲塔'); return; }
+    if (e.key === 'f' || e.key === 'F') {
+      // 在玩家旁邊最近可行走格放塔
+      if (tdSelectedTower > 0) {
+        const pcx = Math.floor(player.x), pcy = Math.floor(player.y);
+        let placed = false;
+        for (let r = 1; r <= 2 && !placed; r++) {
+          for (let dy = -r; dy <= r && !placed; dy++) {
+            for (let dx = -r; dx <= r && !placed; dx++) {
+              const nx = pcx + dx, ny = pcy + dy;
+              if (nx > 0 && ny > 0 && nx < MAP_W - 1 && ny < MAP_H - 1 && isWalkable(MAP[ny][nx])) {
+                const type = tdSelectedTower === 1 ? 'gun' : tdSelectedTower === 2 ? 'ice' : 'cannon';
+                if (tdPlaceTower(type, nx, ny)) placed = true;
+              }
+            }
+          }
+        }
+      }
+      return;
+    }
   }
   if (e.key === '1') useShieldItem();
   else if (e.key === '2') useGrenadeItem();
@@ -10850,6 +11579,46 @@ function showWinScreen() {
     if (!testMode) recordRunEnd(true);
     return;
   }
+  // v6.0：塔防——撐過 20 波通關
+  if (settings.towerDefense) {
+    winStats.innerHTML = `塔防成功！<br>撐過 <span style="color:#fc0;">${tdWave}</span> 波<br>存活時間 <span>${formatTime(gameElapsed)}</span>`;
+    winScreen.style.display = 'flex';
+    clearKeys();
+    if (document.pointerLockElement) document.exitPointerLock();
+    startFireworks();
+    if (!testMode) recordRunEnd(true);
+    return;
+  }
+  // v6.0：密室逃脫——解開全部謎題
+  if (settings.escapeRoom) {
+    winStats.innerHTML = `密室逃脫成功！<br>解開 <span style="color:#6fd;">3</span> 間密室<br>用時 <span>${formatTime(gameElapsed)}</span>`;
+    winScreen.style.display = 'flex';
+    clearKeys();
+    if (document.pointerLockElement) document.exitPointerLock();
+    startFireworks();
+    if (!testMode) recordRunEnd(true);
+    return;
+  }
+  // v6.0：潛入——偷到寶物並逃出
+  if (settings.stealthMode) {
+    winStats.innerHTML = `潛入成功！<br>盜取寶物並安全逃出<br>用時 <span>${formatTime(gameElapsed)}</span><br>被抓次數 <span style="color:#f88;">${stealthCaught}</span>/3`;
+    winScreen.style.display = 'flex';
+    clearKeys();
+    if (document.pointerLockElement) document.exitPointerLock();
+    startFireworks();
+    if (!testMode) recordRunEnd(true);
+    return;
+  }
+  // v6.0：獵殺——殲滅全部精英
+  if (settings.huntMode) {
+    winStats.innerHTML = `獵殺成功！<br>殲滅全部精英 <span style="color:#fa5;">${huntKills}/${huntQuota}</span><br>用時 <span>${formatTime(gameElapsed)}</span>`;
+    winScreen.style.display = 'flex';
+    clearKeys();
+    if (document.pointerLockElement) document.exitPointerLock();
+    startFireworks();
+    if (!testMode) recordRunEnd(true);
+    return;
+  }
   let html = `用時 <span>${formatTime(gameElapsed)}</span><br>`;
   html += `最佳紀錄 <span>${formatTime(best)}</span><br>`;
   html += `等級 <span style="color:#6fd;">Lv.${runXP.level}</span>　擊殺 <span style="color:#fa5;">${runKills}</span>　寶石 <span style="color:#4ff;">${gemsCollected}/${gemsTotal}</span><br>`;
@@ -10983,7 +11752,7 @@ function resetGameState() {
   const useCustom = customEntities && customEntities.length && !useRandomMaze;
   if (useCustom) {
     spawnCustomEntities();
-  } else if (!settings.endlessMode) { // v4.0：無盡模式不生成寶石
+  } else if (!settings.endlessMode && !settings.stealthMode && !settings.huntMode) { // v4.0：無盡模式不生成寶石；v6.0 潛入/獵殺以專屬目標取代寶石
     generateGems();
   }
   // 重置戰鬥/生命值
@@ -11039,6 +11808,13 @@ function resetGameState() {
   document.getElementById('damage-vignette').classList.remove('flash');
   document.getElementById('attack-swing').style.opacity = 0;
   document.getElementById('death-screen').style.display = 'none';
+  // v6.0：重置前先隱藏所有模式 HUD（避免上一局殘留）
+  {
+    const wc = document.getElementById('td-wave-chip'); if (wc) wc.classList.remove('show');
+    const wh = document.getElementById('td-home-hp'); if (wh) wh.classList.remove('show');
+    const rc = document.getElementById('er-room-chip'); if (rc) rc.classList.remove('show');
+    const eh = document.getElementById('er-puzzle-hint'); if (eh) eh.classList.remove('show');
+  }
   // 生成陷阱、鎖門鑰匙、敵人、道具（自訂實體模式則由實體決定）
   if (useCustom) {
     spawnCustomEntityActors();
@@ -11052,6 +11828,29 @@ function resetGameState() {
     generateTraps();
     generateEnemies();
     generateItems();
+  } else if (settings.stealthMode) {
+    // v6.0：潛入——標準迷宮生成（陷阱/門鑰/敵人/道具），中央深處放寶物
+    generateTraps();
+    generateDoorsAndKeys();
+    generateEnemies();
+    generateItems();
+    startStealth();
+  } else if (settings.huntMode) {
+    // v6.0：獵殺——標準迷宮生成，從常駐敵人中挑 3-5 隻升級為精英
+    generateTraps();
+    generateDoorsAndKeys();
+    generateEnemies();
+    generateItems();
+    startHunt();
+  } else if (settings.towerDefense) {
+    // v6.0：塔防——無寶石門鑰/常駐敵人，由波次系統生成；終點移出地圖
+    END = { x: -100, y: -100 };
+    startTowerDefense();
+  } else if (settings.escapeRoom) {
+    // v6.0：密室逃脫——無常駐敵人，謎題元件由 startEscapeRoom 放置
+    generateTraps();
+    generateItems();
+    startEscapeRoom();
   } else {
     generateTraps();
     generateDoorsAndKeys();
@@ -11079,6 +11878,9 @@ function resetGameState() {
   // v4.0：重置寶箱哥布林與無盡波次狀態（endlessWaveT 在非無盡局不會被 startEndlessWaves 呼叫，故在此統一歸 4）
   goblinSpawned = false; goblinRollT = 0; goblinRef = null;
   endlessWave = 0; endlessWaveT = 4;
+  // v6.0：塔防/密室狀態重置
+  homeHP = homeMaxHP; tdWave = 0; tdWaveT = 5; tdEnemies = []; towers = []; tdGameOver = false;
+  erRoomIndex = 1; erPuzzleState = 'idle'; erP1Progress = 0; erP3Progress = 0; erExitUnlocked = false;
   bobPhase = 0; bobOffset = 0;
   shakeTime = 0;
   stepTimer = 0;
