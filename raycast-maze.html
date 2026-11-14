@@ -2805,7 +2805,7 @@
         <option value="100">100x（飛速）</option>
       </select>
     </div>
-    <div id="start-info">版本 <span id="start-version">v7.2</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
+    <div id="start-info">版本 <span id="start-version">v7.3</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
   </div>
 
   <!-- 勝利畫面 -->
@@ -3223,7 +3223,7 @@ const bossHudEl = document.getElementById('boss-hud');
 const bossBarInnerEl = document.getElementById('boss-bar-inner');
 const buffsHudEl = document.getElementById('buffs-hud');
 // v6.0：版本字串常數——開始畫面版本標籤統一引用此處，避免改版漏改
-const GAME_VERSION = 'v7.2';
+const GAME_VERSION = 'v7.3';
 // v3.3：傷害方向指示 overlay（JS 建立，紅色弧形暗角依受擊方向轉向）
 const damageDirEl = document.createElement('div');
 damageDirEl.id = 'damage-dir';
@@ -3492,6 +3492,129 @@ function getGemRGB() {
   const mode = settings.colorblind || 'off';
   if (mode === 'off') return [100, 255, 255];
   return [255, 220, 50];
+}
+
+// --- v7.3：預渲染精靈快取（離屏烤圖一次，運行時只取樣貼圖；不引入 WebGL／外部模型／CDN） ---
+// 每張 atlas 存 grayscale 明暗 + 形狀 alpha，另拆 eye／edge／glyph 遮罩；配色在運行時依現有
+// getEnemyRGB／道具色盤疊上，因此色盲模式映射仍生效。快取惰性建立，每型別只烤一次。
+const spriteAtlasCache = Object.create(null);
+
+function enemyAtlasParams(type) {
+  switch (type) {
+    case 'tank':     return { headW: 0.32, bodyW: 0.80, bottomW: 0.78, shape: 'human' };
+    case 'swarm':    return { headW: 0.30, bodyW: 0.42, bottomW: 0.36, shape: 'spike' };
+    case 'bomber':   return { headW: 0.50, bodyW: 0.62, bottomW: 0.60, shape: 'circle' };
+    case 'sentinel': return { headW: 0.28, bodyW: 0.70, bottomW: 0.70, shape: 'turret' };
+    case 'healer':   return { headW: 0.36, bodyW: 0.50, bottomW: 0.72, shape: 'robe' };
+    case 'echo':     return { headW: 0.40, bodyW: 0.48, bottomW: 0.35, shape: 'hood' };
+    case 'miner':    return { headW: 0.30, bodyW: 0.62, bottomW: 0.55, shape: 'oval' };
+    case 'wraith':   return { headW: 0.40, bodyW: 0.45, bottomW: 0.15, shape: 'wisp' };
+    case 'boss':     return { headW: 0.45, bodyW: 0.85, bottomW: 0.80, shape: 'crown' };
+    case 'chaser':   return { headW: 0.40, bodyW: 0.60, bottomW: 0.55, shape: 'human' };
+    case 'shooter':  return { headW: 0.38, bodyW: 0.50, bottomW: 0.45, shape: 'human' };
+    case 'lurker':   return { headW: 0.40, bodyW: 0.50, bottomW: 0.42, shape: 'hunched' };
+    default:         return { headW: 0.42, bodyW: 0.55, bottomW: 0.50, shape: 'human' };
+  }
+}
+
+function enemyAtlasFill(p, relX, dyR) {
+  const isHead = dyR < -0.3;
+  const halfW = isHead ? p.headW : p.bodyW + (p.bottomW - p.bodyW) * Math.min(1, Math.max(0, (dyR + 0.3) / 1.3));
+  let filled = Math.abs(relX) <= halfW;
+  if (p.shape === 'circle' && relX * relX + dyR * dyR > 0.64) filled = false;
+  else if (p.shape === 'oval' && (relX / 0.62) * (relX / 0.62) + (dyR / 0.6) * (dyR / 0.6) > 1) filled = false;
+  else if (p.shape === 'spike' && Math.abs(relX) > 0.36 && !(Math.abs(relX) <= 0.52 && dyR > -0.15 && dyR < 0.25)) filled = false;
+  else if (p.shape === 'hood' && dyR < -0.75 && Math.abs(relX) > 0.2) filled = false;
+  else if (p.shape === 'crown' && dyR < -0.72 && !(Math.abs(relX) < 0.15 || Math.abs(Math.abs(relX) - 0.3) < 0.12)) filled = false;
+  return filled;
+}
+
+function getEnemyAtlas(type) {
+  const key = 'e:' + type;
+  if (spriteAtlasCache[key]) return spriteAtlasCache[key];
+  const W = 48, H = 64;
+  const data = new Uint8ClampedArray(W * H * 4);
+  const eye = new Uint8Array(W * H);
+  const edge = new Uint8Array(W * H);
+  const p = enemyAtlasParams(type);
+  for (let ay = 0; ay < H; ay++) {
+    const dyR = ay / (H - 1) * 2 - 1;
+    const isHead = dyR < -0.3;
+    const halfW = isHead ? p.headW : p.bodyW + (p.bottomW - p.bodyW) * Math.min(1, Math.max(0, (dyR + 0.3) / 1.3));
+    for (let ax = 0; ax < W; ax++) {
+      const relX = ax / (W - 1) * 2 - 1;
+      if (!enemyAtlasFill(p, relX, dyR)) continue;
+      const axAbs = Math.abs(relX);
+      // 體積明暗：頭部高光 → 軀幹中調 → 下擺壓暗；左側 rim light，右側稍暗
+      let shade = isHead ? 1.10 : 0.84;
+      shade *= 1 - 0.22 * Math.max(0, dyR);
+      if (relX < -0.25) shade += 0.10;
+      if (relX > 0.30) shade -= 0.06;
+      const isEdge = axAbs > halfW - 0.10 || dyR > 0.85;
+      if (isEdge) shade *= 0.40;
+      const isEye = isHead && ((relX < -0.12 && relX > -0.32) || (relX > 0.12 && relX < 0.32)) && Math.abs(dyR + 0.55) < 0.12;
+      const i = ay * W + ax, idx = i * 4;
+      const v = Math.max(0, Math.min(255, Math.round(shade * 255)));
+      data[idx] = data[idx + 1] = data[idx + 2] = v;
+      data[idx + 3] = 255;
+      if (isEye) eye[i] = 1; else if (isEdge) edge[i] = 1;
+    }
+  }
+  const at = { w: W, h: H, data, eye, edge };
+  spriteAtlasCache[key] = at;
+  return at;
+}
+
+// 道具圖案判定（烤圖與運行時後備共用）
+function itemGlyphFlag(type, relX, dyR, ar, ad) {
+  if (type === 'health') return (ar < 0.18 && ad < 0.55) || (ad < 0.18 && ar < 0.55);
+  if (type === 'speed') return (ar < 0.14 && ad < 0.2) || (relX > 0 && ad < 0.42 - relX * 0.35);
+  if (type === 'shield') return ar < 0.45 && dyR < 0.45 && (ar > 0.3 || ad > 0.3 || (dyR > 0.2 && ar > 0.15));
+  if (type === 'star') return ar + ad < 0.28 || (ad > 0.26 && ar < 0.1) || (ad < -0.26 && ar < 0.1) || (ar > 0.26 && ad < 0.1);
+  if (type === 'crystal') return ar * 0.8 + ad < 0.5 && ar < 0.3;
+  if (type === 'xpgem') { const rr = relX * relX + dyR * dyR; return (rr > 0.09 && rr < 0.18) || rr < 0.04; }
+  if (type === 'maxup') return (ar < 0.16 && dyR > -0.45 && dyR < 0.3) || (dyR < -0.05 && ad < 0.45 - ar * 0.7);
+  if (type === 'reveal' || type === 'clair') { const ex = ar / 0.5, ey = ad / 0.28, ee = ex * ex + ey * ey; return (ee > 0.5 && ee <= 1) || relX * relX + dyR * dyR < 0.08; }
+  if (type === 'grenade' || type === 'frost_grenade') { const rr = relX * relX + dyR * dyR; return (rr > 0.14 && rr < 0.25) || (ar < 0.1 && ad > 0.42) || (type === 'frost_grenade' && (ar < 0.07 || ad < 0.07)); }
+  if (type === 'cannon') { const rr = relX * relX + dyR * dyR; return relX < -0.1 && dyR < -0.1 && rr < 0.12; }
+  if (type === 'scroll') return ar < 0.42 && ad < 0.3 && (ad > 0.18 || ad < 0.18 || ar < 0.06);
+  if (type === 'charm') return ar + ad < 0.45 && ar + ad < 0.22;
+  if (type === 'recall_scroll') { const rr = relX * relX + dyR * dyR; return ar < 0.42 && ad < 0.3 && ((rr > 0.05 && rr < 0.14) || (relX > 0.15 && ad < 0.12)); }
+  if (type === 'smoke_bomb') return (ar < 0.09 && ad > 0.38) || (ad > 0.28 && ar < 0.25);
+  if (type === 'warhorn') return (relX > 0.25 && ad < 0.3) || (relX < -0.3 && ad < 0.1);
+  return false;
+}
+
+function getItemAtlas(type) {
+  const key = 'i:' + type;
+  if (spriteAtlasCache[key]) return spriteAtlasCache[key];
+  const W = 32, H = 32;
+  const data = new Uint8ClampedArray(W * H * 4);
+  const glyph = new Uint8Array(W * H);
+  for (let ay = 0; ay < H; ay++) {
+    const dyR = ay / (H - 1) * 2 - 1;
+    const ad = Math.abs(dyR);
+    for (let ax = 0; ax < W; ax++) {
+      const relX = ax / (W - 1) * 2 - 1;
+      const ar = Math.abs(relX);
+      const rr = relX * relX + dyR * dyR;
+      const blob = rr < 0.64;
+      const glow = Math.max(0, (1 - ar) * (1 - ad * 0.5));
+      if (!blob && glow < 0.05) continue;
+      const g = itemGlyphFlag(type, relX, dyR, ar, ad);
+      let shade = blob ? 0.95 : 0.55;
+      shade *= 1 - 0.18 * Math.max(0, dyR);
+      let alpha = blob ? 210 : Math.round(glow * 90);
+      if (g) shade = 1.0;
+      const i = ay * W + ax, idx = i * 4;
+      data[idx] = data[idx + 1] = data[idx + 2] = Math.max(0, Math.min(255, Math.round(shade * 255)));
+      data[idx + 3] = alpha;
+      if (g) glyph[i] = 1;
+    }
+  }
+  const at = { w: W, h: H, data, glyph };
+  spriteAtlasCache[key] = at;
+  return at;
 }
 
 // --- 粒子密度上限（須早於 applySettings 首次呼叫，故在此宣告） ---
@@ -7067,6 +7190,9 @@ function render() {
 
       // v7.2：各型別專屬剪影寬度（headW 頭部 / bodyW 軀幹 / bottomW 下擺，相對 size/2）
       const et = e.type;
+      // v7.3：覆蓋型別走預渲染 atlas billboard；其餘（splitter/clone/lancer/goblin）保留 v7.2 程式繪製後備
+      const ATLAS_ENEMIES = { patrol: 1, chaser: 1, tank: 1, swarm: 1, bomber: 1, shooter: 1, sentinel: 1, lurker: 1, healer: 1, echo: 1, miner: 1, wraith: 1, boss: 1 };
+      const eatlas = ATLAS_ENEMIES[et] ? getEnemyAtlas(et) : null;
       let headW = 0.42, bodyW = 0.55, bottomW = 0.5;
       if (et === 'tank') { headW = 0.32; bodyW = 0.80; bottomW = 0.78; }
       else if (et === 'swarm') { headW = 0.30; bodyW = 0.42; bottomW = 0.36; }
@@ -7094,19 +7220,6 @@ function render() {
           if (Math.abs(dyR) > 1.0) continue;
           // 區域判定：頭部 dyR<-0.3，眼睛在頭部偏上兩側
           const isHead = dyR < -0.3;
-          let halfW = isHead ? headW : bodyW + (bottomW - bodyW) * Math.min(1, Math.max(0, (dyR + 0.3) / 1.3));
-          // 專屬造型遮罩：圓身／甲蟲卵殼／尖刺／耳朵／兜帽尖頂／Boss 頭冠
-          let filled = absRelX <= halfW;
-          if (et === 'bomber' && relX * relX + dyR * dyR > 0.64) filled = false;
-          else if (et === 'miner' && (relX / 0.62) * (relX / 0.62) + (dyR / 0.6) * (dyR / 0.6) > 1) filled = false;
-          else if (et === 'swarm' && absRelX > 0.36 && !(absRelX <= 0.52 && dyR > -0.15 && dyR < 0.25)) filled = false;
-          else if (et === 'goblin' && absRelX > 0.42 && !(absRelX <= 0.55 && dyR > -0.72 && dyR < -0.4)) filled = false;
-          else if ((et === 'echo' || et === 'clone') && dyR < -0.75 && absRelX > 0.2) filled = false;
-          else if (et === 'boss' && dyR < -0.72 && !(absRelX < 0.15 || Math.abs(absRelX - 0.3) < 0.12)) filled = false;
-          if (!filled) continue;
-          const eyeL = isHead && relX < -0.12 && relX > -0.32 && Math.abs(dyR + 0.55) < 0.12;
-          const eyeR = isHead && relX >  0.12 && relX <  0.32 && Math.abs(dyR + 0.55) < 0.12;
-          const isEye = eyeL || eyeR;
           // v2.5：潛伏者未現身時透明度壓到 0.12~0.15（近乎隱形），現身則正常
           let alpha = 1.0;
           if (e.type === 'lurker') alpha = e.revealed ? 1.0 : 0.13;
@@ -7114,37 +7227,71 @@ function render() {
           if (e.type === 'clone') alpha = 0.45;
           // v5.0：相位幽靈：半透明（0.7，沿用 clone alpha 模式）
           if (e.type === 'wraith') alpha = 0.7;
-          // Boss 階段3 紅色光暈（在身體邊緣加紅）
           let drawR = cr, drawG = cg, drawB = cb;
-          if (e.hitFlash > 0) { drawR = drawG = drawB = 255; }
-          else if (isEye) { drawR = drawG = drawB = 255; }
-          else {
-            // 頭部提亮、身體壓暗，拉出立體層次
-            if (isHead) {
-              drawR = Math.min(255, drawR * 1.25 + 25);
-              drawG = Math.min(255, drawG * 1.25 + 25);
-              drawB = Math.min(255, drawB * 1.25 + 25);
-            } else {
-              drawR *= 0.72; drawG *= 0.72; drawB *= 0.72;
+          let isEye = false;
+          if (eatlas) {
+            // v7.3：取樣預渲染 atlas（明暗／描邊／眼睛已烤入），配色仍用上方運行時色盤
+            const u = (relX + 1) / 2, v = (dyR + 1) / 2;
+            const ax = Math.min(eatlas.w - 1, (u * eatlas.w) | 0);
+            const ay = Math.min(eatlas.h - 1, (v * eatlas.h) | 0);
+            const ai = ay * eatlas.w + ax, a4 = ai * 4;
+            if (eatlas.data[a4 + 3] < 8) continue;
+            const shade = eatlas.data[a4] / 255;
+            isEye = eatlas.eye[ai] === 1;
+            const isEdge = eatlas.edge[ai] === 1;
+            if (e.hitFlash > 0) { drawR = drawG = drawB = 255; }
+            else if (isEye) { drawR = drawG = drawB = 255; }
+            else {
+              drawR = cr * shade; drawG = cg * shade; drawB = cb * shade;
+              if (e.isElite && isEdge) { drawR = 255; drawG = 215; drawB = 60; }
+              else if (isEdge) { drawR *= 0.35; drawG *= 0.35; drawB *= 0.35; }
+              // Boss 狂暴紅光
+              if (e.type === 'boss' && e.hp < e.maxHp * 0.33) { drawR = Math.min(255, drawR * 1.4); drawG *= 0.8; drawB *= 0.8; }
             }
-            // 造型裝甲／裝飾亮色：盾槍盾面、哨兵砲管、坦克甲帶、法袍中線、Boss 頭冠
-            let plate = false;
-            if (et === 'lancer' && relX > 0.15 && dyR > -0.1 && dyR < 0.5) plate = true;
-            else if (et === 'sentinel' && Math.abs(relX) < 0.18 && dyR < -0.1) plate = true;
-            else if (et === 'tank' && dyR > 0.0 && dyR < 0.22) plate = true;
-            else if (et === 'healer' && Math.abs(relX) < 0.12) plate = true;
-            else if (et === 'boss' && dyR < -0.72) plate = true;
-            if (plate) { drawR = Math.min(255, drawR * 1.15 + 20); drawG = Math.min(255, drawG * 1.15 + 20); drawB = Math.min(255, drawB * 1.15 + 20); }
-            // 分裂體中線暗紋
-            if (et === 'splitter' && Math.abs(relX) < 0.08 && dyR > -0.1 && dyR < 0.5) { drawR *= 0.6; drawG *= 0.6; drawB *= 0.6; }
-            // 邊緣深色描邊：左右側邊與頭頂/下巴，拉開與背景的層次
-            const isEdge = absRelX > halfW - 0.12 || dyR > 0.85;
-            if (e.isElite && (absRelX > 0.55 || dyR < -0.85)) {
-              // v7.0：精英金色光環描邊
-              drawR = 255; drawG = 215; drawB = 60;
-            } else if (isEdge) { drawR *= 0.35; drawG *= 0.35; drawB *= 0.35; }
-            // Boss 狂暴紅光
-            if (e.type === 'boss' && e.hp < e.maxHp * 0.33) { drawR = Math.min(255, drawR * 1.4); drawG *= 0.8; drawB *= 0.8; }
+          } else {
+            let halfW = isHead ? headW : bodyW + (bottomW - bodyW) * Math.min(1, Math.max(0, (dyR + 0.3) / 1.3));
+            // 專屬造型遮罩：圓身／甲蟲卵殼／尖刺／耳朵／兜帽尖頂／Boss 頭冠
+            let filled = absRelX <= halfW;
+            if (et === 'bomber' && relX * relX + dyR * dyR > 0.64) filled = false;
+            else if (et === 'miner' && (relX / 0.62) * (relX / 0.62) + (dyR / 0.6) * (dyR / 0.6) > 1) filled = false;
+            else if (et === 'swarm' && absRelX > 0.36 && !(absRelX <= 0.52 && dyR > -0.15 && dyR < 0.25)) filled = false;
+            else if (et === 'goblin' && absRelX > 0.42 && !(absRelX <= 0.55 && dyR > -0.72 && dyR < -0.4)) filled = false;
+            else if ((et === 'echo' || et === 'clone') && dyR < -0.75 && absRelX > 0.2) filled = false;
+            else if (et === 'boss' && dyR < -0.72 && !(absRelX < 0.15 || Math.abs(absRelX - 0.3) < 0.12)) filled = false;
+            if (!filled) continue;
+            const eyeL = isHead && relX < -0.12 && relX > -0.32 && Math.abs(dyR + 0.55) < 0.12;
+            const eyeR = isHead && relX >  0.12 && relX <  0.32 && Math.abs(dyR + 0.55) < 0.12;
+            isEye = eyeL || eyeR;
+            if (e.hitFlash > 0) { drawR = drawG = drawB = 255; }
+            else if (isEye) { drawR = drawG = drawB = 255; }
+            else {
+              // 頭部提亮、身體壓暗，拉出立體層次
+              if (isHead) {
+                drawR = Math.min(255, drawR * 1.25 + 25);
+                drawG = Math.min(255, drawG * 1.25 + 25);
+                drawB = Math.min(255, drawB * 1.25 + 25);
+              } else {
+                drawR *= 0.72; drawG *= 0.72; drawB *= 0.72;
+              }
+              // 造型裝甲／裝飾亮色：盾槍盾面、哨兵砲管、坦克甲帶、法袍中線、Boss 頭冠
+              let plate = false;
+              if (et === 'lancer' && relX > 0.15 && dyR > -0.1 && dyR < 0.5) plate = true;
+              else if (et === 'sentinel' && Math.abs(relX) < 0.18 && dyR < -0.1) plate = true;
+              else if (et === 'tank' && dyR > 0.0 && dyR < 0.22) plate = true;
+              else if (et === 'healer' && Math.abs(relX) < 0.12) plate = true;
+              else if (et === 'boss' && dyR < -0.72) plate = true;
+              if (plate) { drawR = Math.min(255, drawR * 1.15 + 20); drawG = Math.min(255, drawG * 1.15 + 20); drawB = Math.min(255, drawB * 1.15 + 20); }
+              // 分裂體中線暗紋
+              if (et === 'splitter' && Math.abs(relX) < 0.08 && dyR > -0.1 && dyR < 0.5) { drawR *= 0.6; drawG *= 0.6; drawB *= 0.6; }
+              // 邊緣深色描邊：左右側邊與頭頂/下巴，拉開與背景的層次
+              const isEdge = absRelX > halfW - 0.12 || dyR > 0.85;
+              if (e.isElite && (absRelX > 0.55 || dyR < -0.85)) {
+                // v7.0：精英金色光環描邊
+                drawR = 255; drawG = 215; drawB = 60;
+              } else if (isEdge) { drawR *= 0.35; drawG *= 0.35; drawB *= 0.35; }
+              // Boss 狂暴紅光
+              if (e.type === 'boss' && e.hp < e.maxHp * 0.33) { drawR = Math.min(255, drawR * 1.4); drawG *= 0.8; drawB *= 0.8; }
+            }
           }
           // v3.0：冰霜凍結：冰藍色調覆蓋（e.freezeT>0）
           if (e.freezeT > 0 && !isEye) {
@@ -7291,6 +7438,7 @@ function render() {
       else if (it.type === 'warhorn') { cr = 255; cg = 170; cb = 60; }
       else { cr = 255; cg = 220; cb = 80; }
       const itType = it.type;
+      const iatlas = getItemAtlas(itType); // v7.3：預渲染道具貼圖（圖案／明暗／光暈 alpha 已烤入）
       for (let stripe = Math.max(0, drawStartX); stripe < Math.min(W, drawEndX); stripe++) {
         if (tY >= zBuffer[stripe]) continue;
         const relX = (stripe - spriteScreenX) / (size / 2);
@@ -7298,35 +7446,54 @@ function render() {
         for (let y = Math.max(0, Math.floor(centerY - halfH)); y < Math.min(H, Math.floor(centerY + halfH)); y++) {
           const dyR = (y - centerY) / halfH;
           const ar = Math.abs(relX), ad = Math.abs(dyR);
-          // v7.2：專屬圖案（relX/dyR 區域判定），glyph 提亮成近白主紋
-          let glyph = false;
-          if (itType === 'health') { glyph = (ar < 0.18 && ad < 0.55) || (ad < 0.18 && ar < 0.55); }
-          else if (itType === 'speed') { glyph = (ar < 0.14 && ad < 0.2) || (relX > 0 && ad < 0.42 - relX * 0.35); }
-          else if (itType === 'shield') { glyph = ar < 0.45 && dyR < 0.45 && (ar > 0.3 || ad > 0.3 || (dyR > 0.2 && ar > 0.15)); }
-          else if (itType === 'star') { glyph = ar + ad < 0.28 || (ad > 0.26 && ar < 0.1) || (ad < -0.26 && ar < 0.1) || (ar > 0.26 && ad < 0.1); }
-          else if (itType === 'crystal') { glyph = ar * 0.8 + ad < 0.5 && ar < 0.3; }
-          else if (itType === 'xpgem') { const rr = relX * relX + dyR * dyR; glyph = rr > 0.09 && rr < 0.18 || rr < 0.04; }
-          else if (itType === 'maxup') { glyph = (ar < 0.16 && dyR > -0.45 && dyR < 0.3) || (dyR < -0.05 && ad < 0.45 - ar * 0.7); }
-          else if (itType === 'reveal' || itType === 'clair') { const ex = ar / 0.5, ey = ad / 0.28, ee = ex * ex + ey * ey; glyph = ee > 0.5 && ee <= 1 || relX * relX + dyR * dyR < 0.08; }
-          else if (itType === 'grenade' || itType === 'frost_grenade') { const rr = relX * relX + dyR * dyR; glyph = (rr > 0.14 && rr < 0.25) || (ar < 0.1 && ad > 0.42) || (itType === 'frost_grenade' && (ar < 0.07 || ad < 0.07)); }
-          else if (itType === 'cannon') { const rr = relX * relX + dyR * dyR; glyph = relX < -0.1 && dyR < -0.1 && rr < 0.12; }
-          else if (itType === 'scroll') { glyph = ar < 0.42 && ad < 0.3 && (ad > 0.18 || ad < 0.18 || ar < 0.06); }
-          else if (itType === 'charm') { glyph = ar + ad < 0.45 && ar + ad < 0.22; }
-          else if (itType === 'recall_scroll') { const rr = relX * relX + dyR * dyR; glyph = ar < 0.42 && ad < 0.3 && ((rr > 0.05 && rr < 0.14) || relX > 0.15 && ad < 0.12); }
-          else if (itType === 'smoke_bomb') { glyph = ar < 0.09 && ad > 0.38 || (ad > 0.28 && ar < 0.25); }
-          else if (itType === 'warhorn') { glyph = relX > 0.25 && ad < 0.3 || (relX < -0.3 && ad < 0.1); }
-          const blob = relX * relX + dyR * dyR < 0.64;
           let a, dr, dg, db;
-          if (glyph) {
-            a = 0.95;
-            dr = Math.min(255, cr * 0.45 + 255 * 0.55);
-            dg = Math.min(255, cg * 0.45 + 255 * 0.55);
-            db = Math.min(255, cb * 0.45 + 255 * 0.55);
-          } else if (blob) {
-            a = 0.8; dr = cr; dg = cg; db = cb;
+          if (iatlas) {
+            const u = (relX + 1) / 2, v = (dyR + 1) / 2;
+            const ax = Math.min(iatlas.w - 1, (u * iatlas.w) | 0);
+            const ay = Math.min(iatlas.h - 1, (v * iatlas.h) | 0);
+            const ai = ay * iatlas.w + ax, a4 = ai * 4;
+            const cov = iatlas.data[a4 + 3];
+            if (cov < 8) continue;
+            const shade = iatlas.data[a4] / 255;
+            const g = iatlas.glyph[ai] === 1;
+            a = cov / 255;
+            if (g) {
+              dr = Math.min(255, cr * 0.45 + 255 * 0.55);
+              dg = Math.min(255, cg * 0.45 + 255 * 0.55);
+              db = Math.min(255, cb * 0.45 + 255 * 0.55);
+            } else {
+              dr = cr * shade; dg = cg * shade; db = cb * shade;
+            }
           } else {
-            const glow = (1 - ar) * (1 - ad * 0.5);
-            a = Math.max(0, glow) * 0.35; dr = cr; dg = cg; db = cb;
+            // v7.2 程式繪製後備
+            let glyph = false;
+            if (itType === 'health') { glyph = (ar < 0.18 && ad < 0.55) || (ad < 0.18 && ar < 0.55); }
+            else if (itType === 'speed') { glyph = (ar < 0.14 && ad < 0.2) || (relX > 0 && ad < 0.42 - relX * 0.35); }
+            else if (itType === 'shield') { glyph = ar < 0.45 && dyR < 0.45 && (ar > 0.3 || ad > 0.3 || (dyR > 0.2 && ar > 0.15)); }
+            else if (itType === 'star') { glyph = ar + ad < 0.28 || (ad > 0.26 && ar < 0.1) || (ad < -0.26 && ar < 0.1) || (ar > 0.26 && ad < 0.1); }
+            else if (itType === 'crystal') { glyph = ar * 0.8 + ad < 0.5 && ar < 0.3; }
+            else if (itType === 'xpgem') { const rr = relX * relX + dyR * dyR; glyph = rr > 0.09 && rr < 0.18 || rr < 0.04; }
+            else if (itType === 'maxup') { glyph = (ar < 0.16 && dyR > -0.45 && dyR < 0.3) || (dyR < -0.05 && ad < 0.45 - ar * 0.7); }
+            else if (itType === 'reveal' || itType === 'clair') { const ex = ar / 0.5, ey = ad / 0.28, ee = ex * ex + ey * ey; glyph = ee > 0.5 && ee <= 1 || relX * relX + dyR * dyR < 0.08; }
+            else if (itType === 'grenade' || itType === 'frost_grenade') { const rr = relX * relX + dyR * dyR; glyph = (rr > 0.14 && rr < 0.25) || (ar < 0.1 && ad > 0.42) || (itType === 'frost_grenade' && (ar < 0.07 || ad < 0.07)); }
+            else if (itType === 'cannon') { const rr = relX * relX + dyR * dyR; glyph = relX < -0.1 && dyR < -0.1 && rr < 0.12; }
+            else if (itType === 'scroll') { glyph = ar < 0.42 && ad < 0.3 && (ad > 0.18 || ad < 0.18 || ar < 0.06); }
+            else if (itType === 'charm') { glyph = ar + ad < 0.45 && ar + ad < 0.22; }
+            else if (itType === 'recall_scroll') { const rr = relX * relX + dyR * dyR; glyph = ar < 0.42 && ad < 0.3 && ((rr > 0.05 && rr < 0.14) || relX > 0.15 && ad < 0.12); }
+            else if (itType === 'smoke_bomb') { glyph = ar < 0.09 && ad > 0.38 || (ad > 0.28 && ar < 0.25); }
+            else if (itType === 'warhorn') { glyph = relX > 0.25 && ad < 0.3 || (relX < -0.3 && ad < 0.1); }
+            const blob = relX * relX + dyR * dyR < 0.64;
+            if (glyph) {
+              a = 0.95;
+              dr = Math.min(255, cr * 0.45 + 255 * 0.55);
+              dg = Math.min(255, cg * 0.45 + 255 * 0.55);
+              db = Math.min(255, cb * 0.45 + 255 * 0.55);
+            } else if (blob) {
+              a = 0.8; dr = cr; dg = cg; db = cb;
+            } else {
+              const glow = (1 - ar) * (1 - ad * 0.5);
+              a = Math.max(0, glow) * 0.35; dr = cr; dg = cg; db = cb;
+            }
           }
           const pi = (y * W + stripe) * 4;
           buf[pi]   = buf[pi]   * (1 - a) + dr * a;
