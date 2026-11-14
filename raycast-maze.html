@@ -2805,7 +2805,7 @@
         <option value="100">100x（飛速）</option>
       </select>
     </div>
-    <div id="start-info">版本 <span id="start-version">v7.0</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
+    <div id="start-info">版本 <span id="start-version">v7.1</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
   </div>
 
   <!-- 勝利畫面 -->
@@ -3223,7 +3223,7 @@ const bossHudEl = document.getElementById('boss-hud');
 const bossBarInnerEl = document.getElementById('boss-bar-inner');
 const buffsHudEl = document.getElementById('buffs-hud');
 // v6.0：版本字串常數——開始畫面版本標籤統一引用此處，避免改版漏改
-const GAME_VERSION = 'v7.0';
+const GAME_VERSION = 'v7.1';
 // v3.3：傷害方向指示 overlay（JS 建立，紅色弧形暗角依受擊方向轉向）
 const damageDirEl = document.createElement('div');
 damageDirEl.id = 'damage-dir';
@@ -4499,6 +4499,7 @@ function updateStealth(dt) {
   if (stealthCatchCd <= 0) {
     for (const e of enemies) {
       if (e.state === 'dead') continue;
+      if (invulnTimer > 0) continue; // v7.1：無敵期間不計接觸被抓（與戰鬥無敵一致，避免遣返後瞬間連抓）
       if (Math.hypot(player.x - e.x, player.y - e.y) < 0.6) {
         stealthCaught++;
         stealthCatchCd = 2.5;
@@ -4513,6 +4514,9 @@ function updateStealth(dt) {
           player.x = START.x; player.y = START.y;
           player.hp = player.maxHp;
           invulnTimer = 2;
+          // v7.1：遣返後守衛失去追蹤（回到巡邏），避免 chase 個體蹲守出生點；警報一併解除
+          stealthAlarm = false; stealthAlarmT = 0;
+          for (const e of enemies) { if (e.state !== 'dead') e.state = 'patrol'; }
           // v7.0：遣返後舊 autoPath 已失效；自動遊玩需重新規劃，避免沿舊路線走回被抓點
           if (autoPlay) { try { planNextAutoTarget(); } catch (e) {} }
         }
@@ -4876,6 +4880,8 @@ let erStandingSwitch = -1;   // 目前踩著的開關 id（離開格子才重新
 let erWrongToastCd = 0;       // 錯誤提示冷卻（秒）
 let erBoxHome = null;         // 箱子初始歸位點
 let erBoxPushCd = 0;          // 自動推箱節流（秒）
+let erApiLatch = false;       // 手動／程式直接呼叫謎題 API 後，懸停 autoplay 自動解謎動作
+let erAiActing = false;      // 目前動作由 autoplay 自身觸發（不設閂鎖）
 let erFlashActive = false;    // 順序閃示播放中
 let erFlashIdx = 0;
 let erFlashT = 0;
@@ -4912,6 +4918,7 @@ function startEscapeRoom() {
   erWrongToastCd = 0;
   erBoxPushCd = 0;
   erFlashActive = false;
+  erApiLatch = false;
   erSwitches = [];
   // 以 START 為基準，在附近可行走格放置謎題元件
   const sx = Math.floor(START.x), sy = Math.floor(START.y);
@@ -5005,6 +5012,7 @@ function erWrongToast(msg) {
 
 // 按開關 i（程式呼叫或走近自動觸發）
 function erPressSwitch(i) {
+  if (autoPlay && !erAiActing) erApiLatch = true; // 外部直接 API 操作後 AI 不再介入
   if (!settings.escapeRoom || erExitUnlocked) return;
   if (erRoomIndex === 1) {
     if (i === erP1Seq[erP1Progress]) {
@@ -5039,6 +5047,7 @@ function erPressSwitch(i) {
 
 // 推箱：dir 'up'|'down'|'left'|'right'
 function erPushBox(dir) {
+  if (autoPlay && !erAiActing) erApiLatch = true;
   if (!settings.escapeRoom || erExitUnlocked) return;
   if (erRoomIndex !== 2 || !erBox || !erPlate) return;
   let dx = 0, dy = 0;
@@ -5305,6 +5314,7 @@ let wonByAuto = false;       // 本局是否以自動遊玩通關（成就判定
 let autoPath = [];       // 路徑格子陣列 [{x,y}, ...]
 let autoPathIndex = 0;   // 當前路徑索引
 let autoTurnSpeed = 7.0;  // 自動轉向速度（更快轉彎）
+let stealthEvadeCd = 0;   // v7.1：潛入閃避冷卻，避免長期壓過走位卡在角落
 let autoMoveSpeed = 4.2;  // 自動移動速度（最高速）
 // 卡住檢測
 let stuckTimer = 0;       // 卡住計時（秒）
@@ -10554,6 +10564,54 @@ function findNearestGem() {
 }
 
 // v7.0：新模式 AI 目標規劃（潛入寶物→END；獵殺最近精英→END；密室依進度目標→END；塔防不走位）
+// v7.1：潛入專用危險加權尋路——守衛周遭格子提高代價，規劃時優先繞開巡邏區；
+// 全圍皆危險時仍退回一般 findPathRaw 確保有路可走。
+function stealthPlanPath(sx, sy, tx, ty) {
+  const W = MAP_W, H = MAP_H, size = W * H;
+  sx |= 0; sy |= 0; tx |= 0; ty |= 0;
+  if (!cellPassable(tx, ty)) return null;
+  const danger = new Float32Array(size);
+  for (const e of enemies) {
+    if (e.state === 'dead') continue;
+    const gx = Math.floor(e.x), gy = Math.floor(e.y);
+    for (let y = gy - 2; y <= gy + 2; y++) {
+      for (let x = gx - 2; x <= gx + 2; x++) {
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const dd = Math.hypot(x - gx, y - gy);
+        if (dd > 3.0) continue;
+        danger[y * W + x] += (3.5 - dd);
+      }
+    }
+  }
+  const g = new Float32Array(size).fill(Infinity);
+  const parent = new Int32Array(size).fill(-1);
+  const si = sy * W + sx, gi = ty * W + tx;
+  g[si] = 0;
+  const open = [[0, si]];
+  const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+  while (open.length) {
+    let bi = 0;
+    for (let i = 1; i < open.length; i++) if (open[i][0] < open[bi][0]) bi = i;
+    const cur = open.splice(bi, 1)[0][1];
+    const cu = g[cur];
+    if (cur === gi) break;
+    const cx = cur % W, cy = (cur / W) | 0;
+    for (const [dx, dy] of dirs) {
+      const nx = cx + dx, ny = cy + dy;
+      if (!cellPassable(nx, ny)) continue;
+      const ni = ny * W + nx;
+      const ng = cu + 1 + danger[ni] * 2.0;
+      if (ng < g[ni]) { g[ni] = ng; parent[ni] = cur; open.push([ng, ni]); }
+    }
+  }
+  if (si !== gi && parent[gi] === -1) return null;
+  const path = [];
+  let c = gi;
+  while (c !== -1) { path.push({ x: c % W, y: (c / W) | 0 }); c = parent[c]; }
+  path.reverse();
+  return path;
+}
+
 function planExclusiveAutoTarget(skipSmooth) {
   try {
     if (settings.towerDefense) {
@@ -10590,9 +10648,14 @@ function planExclusiveAutoTarget(skipSmooth) {
       return null;
     }
     if (!target) return null;
-    const raw = findPathRaw(player.x, player.y, target.x, target.y, pathfindAlgo);
-    if (!raw || !raw.path || raw.path.length < 2) return false;
-    autoPath = skipSmooth ? raw.path : smoothPath(raw.path);
+    let rawPath = null;
+    if (settings.stealthMode) rawPath = stealthPlanPath(player.x, player.y, target.x, target.y);
+    if (!rawPath) {
+      const raw = findPathRaw(player.x, player.y, target.x, target.y, pathfindAlgo);
+      rawPath = raw && raw.path;
+    }
+    if (!rawPath || rawPath.length < 2) return false;
+    autoPath = skipSmooth ? rawPath : smoothPath(rawPath);
     autoPathIndex = 1;
     rebuildPathMarks();
     const info = document.getElementById('autoplay-info');
@@ -10837,8 +10900,82 @@ function updateAutoPlay(dt) {
   // v7.0：塔防模式玩家不需走位，AI 負責補塔，其餘戰鬥/尋路邏輯不介入
   if (settings.towerDefense) { autoPlaceTowers(); return; }
 
-  // v7.0：密室 autoplay 只負責走位規劃（由 planExclusiveAutoTarget 選定開關／箱／壓板目標），
-  // 不直接觸發按開關／推箱——謎題動作一律由玩家（或程式直接 API）執行，避免與手動操作互相覆寫狀態。
+  // === v7.1：潛入威脅規避 ===
+  // 近距離守衛（不問視線／朝向）作為接觸閃避威脅；有視線且在視錐內者作為偵測威脅。
+  // 偵測威脅接近時蹲下縮減偵測範圍與上升速率；任一守衛貼近或偵測度偏高時主動拉開距離。
+  if (settings.stealthMode && !gameWon && !playerDead) {
+    if (stealthEvadeCd > 0) stealthEvadeCd -= dt;
+    let threat = null, threatD = Infinity, seeThreat = false;
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - player.x, e.y - player.y);
+      if (d < 4.5 && d < threatD) { threat = e; threatD = d; }
+      if (d >= STEALTH_SEE_RANGE) continue;
+      if (!enemyHasLOS(e.x, e.y, player.x, player.y)) continue;
+      let seen = stealthAlarm || e.state === 'chase';
+      if (!seen) {
+        const angToP = Math.atan2(player.y - e.y, player.x - e.x);
+        let diff = angToP - (typeof e.dir === 'number' ? e.dir : 0);
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        seen = Math.abs(diff) <= STEALTH_CONE_HALF;
+      }
+      if (seen) seeThreat = true;
+    }
+    const wantCrouch = seeThreat;
+    if (wantCrouch !== crouching) {
+      crouching = wantCrouch;
+      document.body.classList.toggle('crouching', crouching);
+    }
+    if (stealthEvadeCd <= 0 && threat && (stealthDetect > 20 || threatD < 3.2)) {
+      const away = Math.atan2(player.y - threat.y, player.x - threat.x);
+      let diff = away - player.dir;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      player.dir += Math.sign(diff) * Math.min(Math.abs(diff), autoTurnSpeed * dt);
+      const sp = autoMoveSpeed * dt * 0.9;
+      const mx = Math.cos(away) * sp, my = Math.sin(away) * sp;
+      if (canMove(player.x + mx, player.y) && canMove(player.x, player.y + my)) {
+        player.x += mx; player.y += my;
+      } else {
+        let sidestep = false;
+        for (const sa of [away + Math.PI / 2, away - Math.PI / 2, away + Math.PI]) {
+          const sx2 = Math.cos(sa) * sp, sy2 = Math.sin(sa) * sp;
+          if (canMove(player.x + sx2, player.y) && canMove(player.x, player.y + sy2)) {
+            player.x += sx2; player.y += sy2; sidestep = true; break;
+          }
+        }
+        void sidestep;
+      }
+      stealthEvadeCd = 0.55;
+      return; // 規避優先：本幀不跟隨路徑
+    }
+  }
+
+  // v7.1：密室 autoplay 解謎——走到序列開關旁自動按下；房間 2 靠近箱子朝壓板方向推。
+  // 閂鎖保護：若謎題已被玩家／程式直接 API 操作過（erApiLatch），AI 不再介入，
+  // 避免與直接呼叫互相覆寫進度；閃示播放中也不觸發。
+  if (settings.escapeRoom && !erApiLatch && !erExitUnlocked && !erFlashActive) {
+    if (erRoomIndex === 1 || erRoomIndex === 3) {
+      const seq = erRoomIndex === 3 ? erP3Seq : erP1Seq;
+      const prog = erRoomIndex === 3 ? erP3Progress : erP1Progress;
+      const sid = seq[prog];
+      const sw = (typeof sid === 'number') ? erSwitches[sid] : null;
+      if (sw) {
+        const dSw = Math.hypot(player.x - (sw.x + 0.5), player.y - (sw.y + 0.5));
+        if (dSw < 0.75) { erAiActing = true; erPressSwitch(sid); erAiActing = false; planNextAutoTarget(); }
+      }
+    } else if (erRoomIndex === 2 && erBox && erBoxPushCd <= 0) {
+      const dB = Math.hypot(player.x - (erBox.x + 0.5), player.y - (erBox.y + 0.5));
+      if (dB < 0.95) {
+        const dxp = erPlate.x - erBox.x, dyp = erPlate.y - erBox.y;
+        const dir = Math.abs(dxp) > Math.abs(dyp) ? (dxp > 0 ? 'right' : 'left') : (dyp > 0 ? 'down' : 'up');
+        erAiActing = true; erPushBox(dir); erAiActing = false;
+        erBoxPushCd = ER_BOX_PUSH_CD;
+        planNextAutoTarget();
+      }
+    }
+  }
 
   // === 道具 AI（精準操作） ===
   // 護盾：敵人在攻擊前一刻自動開啟
@@ -11025,6 +11162,13 @@ function updateAutoPlay(dt) {
       }
       const skip = autoStuckCount >= 2;
       if (planNextAutoTarget(skip)) return; // 重新規劃成功，下一幀繼續
+      // v7.1：重規劃失敗時先往附近可行走格挪一步再試一次，避免一次失敗就停止自動遊玩
+      let nudged = false;
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]]) {
+        const nx = player.x + dx * 0.3, ny = player.y + dy * 0.3;
+        if (canMove(nx, ny)) { player.x = nx; player.y = ny; nudged = true; break; }
+      }
+      if (nudged && planNextAutoTarget(skip)) return;
       else { stopAutoPlay(); return; }
     }
   } else {
@@ -12820,7 +12964,7 @@ function resetGameState() {
   // 重置戰鬥/生命值
   player.maxHp = 100; // 每局重置最大HP（max up 為單局成長）
   player.hp = player.maxHp;
-  invulnTimer = 0;
+  invulnTimer = 1.5; // v7.1：出生短暫無敵緩衝，避免開局貼臉即被抓
   shieldActive = false;
   shieldImmuneT = 0;
   itemInv = { shield: 0, grenade: 0, cannon: 0, frostGrenade: 0, recall: 0 }; // v3.0：新道具庫存歸零
@@ -12883,8 +13027,8 @@ function resetGameState() {
   tdGold = TD_START_GOLD; tdPlaceCd = 0; tdLastFail = '';
   erRoomIndex = 1; erPuzzleState = 'idle'; erP1Progress = 0; erP3Progress = 0; erExitUnlocked = false;
   erSwitches = []; erBox = null; erPlate = null; erBoxHome = null;
-  erStandingSwitch = -1; erWrongToastCd = 0; erBoxPushCd = 0; erFlashActive = false; erFlashIdx = 0; erFlashT = 0; erFlashSeq = [];
-  stealthDetect = 0; stealthAlarm = false; stealthAlarmT = 0; stealthTreasureTaken = false;
+  erStandingSwitch = -1; erWrongToastCd = 0; erBoxPushCd = 0; erFlashActive = false; erFlashIdx = 0; erFlashT = 0; erFlashSeq = []; erApiLatch = false; erAiActing = false;
+  stealthDetect = 0; stealthAlarm = false; stealthAlarmT = 0; stealthTreasureTaken = false; stealthEvadeCd = 0;
   stealthCaught = 0; stealthCatchCd = 0; stealthHintedEnd = false; stealthTreasure = null;
   huntKills = 0; huntElites = []; huntQuota = 0;
   // 生成陷阱、鎖門鑰匙、敵人、道具（自訂實體模式則由實體決定）
