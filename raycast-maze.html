@@ -2805,7 +2805,7 @@
         <option value="100">100x（飛速）</option>
       </select>
     </div>
-    <div id="start-info">版本 <span id="start-version">v7.1</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
+    <div id="start-info">版本 <span id="start-version">v7.2</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
   </div>
 
   <!-- 勝利畫面 -->
@@ -3223,7 +3223,7 @@ const bossHudEl = document.getElementById('boss-hud');
 const bossBarInnerEl = document.getElementById('boss-bar-inner');
 const buffsHudEl = document.getElementById('buffs-hud');
 // v6.0：版本字串常數——開始畫面版本標籤統一引用此處，避免改版漏改
-const GAME_VERSION = 'v7.1';
+const GAME_VERSION = 'v7.2';
 // v3.3：傷害方向指示 overlay（JS 建立，紅色弧形暗角依受擊方向轉向）
 const damageDirEl = document.createElement('div');
 damageDirEl.id = 'damage-dir';
@@ -7056,16 +7056,37 @@ function render() {
       } else if (e.type === 'wraith') {
         // v5.0：相位幽靈：去飽和靛藍（色盲模式對應 getEnemyRGB('wraith')）
         const c = getEnemyRGB('wraith'); cr = c[0]; cg = c[1]; cb = c[2];
+      } else if (e.type === 'lancer') {
+        const c = getEnemyRGB('lancer'); cr = c[0]; cg = c[1]; cb = c[2];
+      } else if (e.type === 'goblin') {
+        cr = 230; cg = 190; cb = 70;
       } else {
         // patrol（巡邏兵）：依色盲模式映射色盤
         const c = getEnemyRGB('patrol'); cr = c[0]; cg = c[1]; cb = c[2];
       }
 
+      // v7.2：各型別專屬剪影寬度（headW 頭部 / bodyW 軀幹 / bottomW 下擺，相對 size/2）
+      const et = e.type;
+      let headW = 0.42, bodyW = 0.55, bottomW = 0.5;
+      if (et === 'tank') { headW = 0.32; bodyW = 0.80; bottomW = 0.78; }
+      else if (et === 'swarm') { headW = 0.30; bodyW = 0.42; bottomW = 0.36; }
+      else if (et === 'bomber') { headW = 0.50; bodyW = 0.62; bottomW = 0.60; }
+      else if (et === 'sentinel') { headW = 0.28; bodyW = 0.70; bottomW = 0.70; }
+      else if (et === 'healer') { headW = 0.36; bodyW = 0.50; bottomW = 0.72; }
+      else if (et === 'echo' || et === 'clone') { headW = 0.40; bodyW = 0.48; bottomW = 0.35; }
+      else if (et === 'miner') { headW = 0.30; bodyW = 0.62; bottomW = 0.55; }
+      else if (et === 'wraith') { headW = 0.40; bodyW = 0.45; bottomW = 0.15; }
+      else if (et === 'boss') { headW = 0.45; bodyW = 0.85; bottomW = 0.80; }
+      else if (et === 'lancer') { headW = 0.40; bodyW = 0.55; bottomW = 0.50; }
+      else if (et === 'goblin') { headW = 0.42; bodyW = 0.45; bottomW = 0.40; }
+      else if (et === 'chaser') { headW = 0.40; bodyW = 0.60; bottomW = 0.55; }
+      else if (et === 'splitter') { headW = 0.45; bodyW = 0.60; bottomW = 0.55; }
+      else if (et === 'shooter') { headW = 0.38; bodyW = 0.50; bottomW = 0.45; }
       for (let stripe = Math.max(0, drawStartX); stripe < Math.min(W, drawEndX); stripe++) {
         if (tY >= zBuffer[stripe]) continue;
         const relX = (stripe - spriteScreenX) / (size / 2);
         const absRelX = Math.abs(relX);
-        if (absRelX > 0.7) continue;
+        if (absRelX > 0.9) continue;
         // v4.1：實心人形剪影——頭（亮）+ 白眼睛 + 身體（暗）+ 深色描邊，遠看一眼就知道是敵人
         const halfH = size * 0.55;
         for (let y = Math.max(0, Math.floor(centerY - halfH)); y < Math.min(H, Math.floor(centerY + halfH)); y++) {
@@ -7073,6 +7094,16 @@ function render() {
           if (Math.abs(dyR) > 1.0) continue;
           // 區域判定：頭部 dyR<-0.3，眼睛在頭部偏上兩側
           const isHead = dyR < -0.3;
+          let halfW = isHead ? headW : bodyW + (bottomW - bodyW) * Math.min(1, Math.max(0, (dyR + 0.3) / 1.3));
+          // 專屬造型遮罩：圓身／甲蟲卵殼／尖刺／耳朵／兜帽尖頂／Boss 頭冠
+          let filled = absRelX <= halfW;
+          if (et === 'bomber' && relX * relX + dyR * dyR > 0.64) filled = false;
+          else if (et === 'miner' && (relX / 0.62) * (relX / 0.62) + (dyR / 0.6) * (dyR / 0.6) > 1) filled = false;
+          else if (et === 'swarm' && absRelX > 0.36 && !(absRelX <= 0.52 && dyR > -0.15 && dyR < 0.25)) filled = false;
+          else if (et === 'goblin' && absRelX > 0.42 && !(absRelX <= 0.55 && dyR > -0.72 && dyR < -0.4)) filled = false;
+          else if ((et === 'echo' || et === 'clone') && dyR < -0.75 && absRelX > 0.2) filled = false;
+          else if (et === 'boss' && dyR < -0.72 && !(absRelX < 0.15 || Math.abs(absRelX - 0.3) < 0.12)) filled = false;
+          if (!filled) continue;
           const eyeL = isHead && relX < -0.12 && relX > -0.32 && Math.abs(dyR + 0.55) < 0.12;
           const eyeR = isHead && relX >  0.12 && relX <  0.32 && Math.abs(dyR + 0.55) < 0.12;
           const isEye = eyeL || eyeR;
@@ -7096,11 +7127,22 @@ function render() {
             } else {
               drawR *= 0.72; drawG *= 0.72; drawB *= 0.72;
             }
+            // 造型裝甲／裝飾亮色：盾槍盾面、哨兵砲管、坦克甲帶、法袍中線、Boss 頭冠
+            let plate = false;
+            if (et === 'lancer' && relX > 0.15 && dyR > -0.1 && dyR < 0.5) plate = true;
+            else if (et === 'sentinel' && Math.abs(relX) < 0.18 && dyR < -0.1) plate = true;
+            else if (et === 'tank' && dyR > 0.0 && dyR < 0.22) plate = true;
+            else if (et === 'healer' && Math.abs(relX) < 0.12) plate = true;
+            else if (et === 'boss' && dyR < -0.72) plate = true;
+            if (plate) { drawR = Math.min(255, drawR * 1.15 + 20); drawG = Math.min(255, drawG * 1.15 + 20); drawB = Math.min(255, drawB * 1.15 + 20); }
+            // 分裂體中線暗紋
+            if (et === 'splitter' && Math.abs(relX) < 0.08 && dyR > -0.1 && dyR < 0.5) { drawR *= 0.6; drawG *= 0.6; drawB *= 0.6; }
             // 邊緣深色描邊：左右側邊與頭頂/下巴，拉開與背景的層次
+            const isEdge = absRelX > halfW - 0.12 || dyR > 0.85;
             if (e.isElite && (absRelX > 0.55 || dyR < -0.85)) {
               // v7.0：精英金色光環描邊
               drawR = 255; drawG = 215; drawB = 60;
-            } else if (absRelX > 0.55 || dyR > 0.85) { drawR *= 0.35; drawG *= 0.35; drawB *= 0.35; }
+            } else if (isEdge) { drawR *= 0.35; drawG *= 0.35; drawB *= 0.35; }
             // Boss 狂暴紅光
             if (e.type === 'boss' && e.hp < e.maxHp * 0.33) { drawR = Math.min(255, drawR * 1.4); drawG *= 0.8; drawB *= 0.8; }
           }
@@ -7228,11 +7270,12 @@ function render() {
       const drawStartX = Math.floor(-size / 2 + spriteScreenX);
       const drawEndX = Math.floor(size / 2 + spriteScreenX);
       const centerY = Math.floor(H / 2 - size / 2 + bob * H / tY * 0.3);
-      // 依道具類型顏色
+      // v7.2：依道具類型專屬配色（補齊原先掉落預設黃的型別）
       let cr, cg, cb;
       if (it.type === 'health') { cr = 255; cg = 70; cb = 70; }
       else if (it.type === 'speed') { cr = 70; cg = 150; cb = 255; }
       else if (it.type === 'shield') { cr = 200; cg = 220; cb = 255; }
+      else if (it.type === 'star') { cr = 255; cg = 220; cb = 80; }
       else if (it.type === 'crystal') { cr = 80; cg = 200; cb = 255; }
       else if (it.type === 'xpgem') { cr = 255; cg = 215; cb = 60; }
       else if (it.type === 'maxup') { cr = 255; cg = 60; cb = 120; }
@@ -7241,19 +7284,54 @@ function render() {
       else if (it.type === 'cannon') { cr = 255; cg = 70; cb = 70; }
       else if (it.type === 'scroll') { cr = 220; cg = 200; cb = 255; } // v2.5 閃電卷軸：白紫電光
       else if (it.type === 'charm') { cr = 120; cg = 255; cb = 180; } // v2.5 護符：翠綠護身
+      else if (it.type === 'frost_grenade') { cr = 150; cg = 220; cb = 255; }
+      else if (it.type === 'recall_scroll') { cr = 200; cg = 180; cb = 230; }
+      else if (it.type === 'clair') { cr = 120; cg = 255; cb = 200; }
+      else if (it.type === 'smoke_bomb') { cr = 150; cg = 150; cb = 160; }
+      else if (it.type === 'warhorn') { cr = 255; cg = 170; cb = 60; }
       else { cr = 255; cg = 220; cb = 80; }
+      const itType = it.type;
       for (let stripe = Math.max(0, drawStartX); stripe < Math.min(W, drawEndX); stripe++) {
         if (tY >= zBuffer[stripe]) continue;
         const relX = (stripe - spriteScreenX) / (size / 2);
         const halfH = size * 0.6;
         for (let y = Math.max(0, Math.floor(centerY - halfH)); y < Math.min(H, Math.floor(centerY + halfH)); y++) {
           const dyR = (y - centerY) / halfH;
-          const glow = (1 - Math.abs(relX)) * (1 - Math.abs(dyR) * 0.5);
-          const a = Math.max(0, glow) * 0.85;
+          const ar = Math.abs(relX), ad = Math.abs(dyR);
+          // v7.2：專屬圖案（relX/dyR 區域判定），glyph 提亮成近白主紋
+          let glyph = false;
+          if (itType === 'health') { glyph = (ar < 0.18 && ad < 0.55) || (ad < 0.18 && ar < 0.55); }
+          else if (itType === 'speed') { glyph = (ar < 0.14 && ad < 0.2) || (relX > 0 && ad < 0.42 - relX * 0.35); }
+          else if (itType === 'shield') { glyph = ar < 0.45 && dyR < 0.45 && (ar > 0.3 || ad > 0.3 || (dyR > 0.2 && ar > 0.15)); }
+          else if (itType === 'star') { glyph = ar + ad < 0.28 || (ad > 0.26 && ar < 0.1) || (ad < -0.26 && ar < 0.1) || (ar > 0.26 && ad < 0.1); }
+          else if (itType === 'crystal') { glyph = ar * 0.8 + ad < 0.5 && ar < 0.3; }
+          else if (itType === 'xpgem') { const rr = relX * relX + dyR * dyR; glyph = rr > 0.09 && rr < 0.18 || rr < 0.04; }
+          else if (itType === 'maxup') { glyph = (ar < 0.16 && dyR > -0.45 && dyR < 0.3) || (dyR < -0.05 && ad < 0.45 - ar * 0.7); }
+          else if (itType === 'reveal' || itType === 'clair') { const ex = ar / 0.5, ey = ad / 0.28, ee = ex * ex + ey * ey; glyph = ee > 0.5 && ee <= 1 || relX * relX + dyR * dyR < 0.08; }
+          else if (itType === 'grenade' || itType === 'frost_grenade') { const rr = relX * relX + dyR * dyR; glyph = (rr > 0.14 && rr < 0.25) || (ar < 0.1 && ad > 0.42) || (itType === 'frost_grenade' && (ar < 0.07 || ad < 0.07)); }
+          else if (itType === 'cannon') { const rr = relX * relX + dyR * dyR; glyph = relX < -0.1 && dyR < -0.1 && rr < 0.12; }
+          else if (itType === 'scroll') { glyph = ar < 0.42 && ad < 0.3 && (ad > 0.18 || ad < 0.18 || ar < 0.06); }
+          else if (itType === 'charm') { glyph = ar + ad < 0.45 && ar + ad < 0.22; }
+          else if (itType === 'recall_scroll') { const rr = relX * relX + dyR * dyR; glyph = ar < 0.42 && ad < 0.3 && ((rr > 0.05 && rr < 0.14) || relX > 0.15 && ad < 0.12); }
+          else if (itType === 'smoke_bomb') { glyph = ar < 0.09 && ad > 0.38 || (ad > 0.28 && ar < 0.25); }
+          else if (itType === 'warhorn') { glyph = relX > 0.25 && ad < 0.3 || (relX < -0.3 && ad < 0.1); }
+          const blob = relX * relX + dyR * dyR < 0.64;
+          let a, dr, dg, db;
+          if (glyph) {
+            a = 0.95;
+            dr = Math.min(255, cr * 0.45 + 255 * 0.55);
+            dg = Math.min(255, cg * 0.45 + 255 * 0.55);
+            db = Math.min(255, cb * 0.45 + 255 * 0.55);
+          } else if (blob) {
+            a = 0.8; dr = cr; dg = cg; db = cb;
+          } else {
+            const glow = (1 - ar) * (1 - ad * 0.5);
+            a = Math.max(0, glow) * 0.35; dr = cr; dg = cg; db = cb;
+          }
           const pi = (y * W + stripe) * 4;
-          buf[pi]   = buf[pi]   * (1 - a) + cr * a;
-          buf[pi+1] = buf[pi+1] * (1 - a) + cg * a;
-          buf[pi+2] = buf[pi+2] * (1 - a) + cb * a;
+          buf[pi]   = buf[pi]   * (1 - a) + dr * a;
+          buf[pi+1] = buf[pi+1] * (1 - a) + dg * a;
+          buf[pi+2] = buf[pi+2] * (1 - a) + db * a;
         }
       }
     } else if (sp.kind === 'ghost') {
@@ -12178,7 +12256,7 @@ function checkItems() {
       it.collected = true;
       applyItem(it.type);
       playItemPickup(it.type);
-      const colMap = { health: [255,80,80], speed: [80,160,255], shield: [200,220,255], star: [255,220,80], crystal: [80,200,255], xpgem: [255,215,60], maxup: [255,60,120], reveal: [200,120,255], grenade: [255,140,40], cannon: [255,70,70], scroll: [220,200,255], charm: [120,255,180], clair: [120,255,200], warhorn: [255,170,60] };
+      const colMap = { health: [255,80,80], speed: [80,160,255], shield: [200,220,255], star: [255,220,80], crystal: [80,200,255], xpgem: [255,215,60], maxup: [255,60,120], reveal: [200,120,255], grenade: [255,140,40], cannon: [255,70,70], scroll: [220,200,255], charm: [120,255,180], clair: [120,255,200], warhorn: [255,170,60], frost_grenade: [150,220,255], recall_scroll: [200,180,230], smoke_bomb: [150,150,160] };
       spawnParticle(it.x, it.y, 0.5, 0, 0, 1.2, 0.5, colMap[it.type] || [255,255,255], 2);
       runItemTypes.add(it.type);
       stats.totalItemsPicked++;
