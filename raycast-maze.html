@@ -2790,21 +2790,20 @@
       <button id="autoplay-btn" style="background:linear-gradient(135deg,#a4f,#82c);">AI 自動遊玩</button>
       <button id="ach-btn" style="background:linear-gradient(135deg,#c93,#960);">成就與統計</button>
     </div>
-    <div style="margin-top:6px; display:flex; align-items:center; gap:8px; justify-content:center;">
-      <label for="speed-select" style="font-size:13px; opacity:0.8;">AI 倍速</label>
-      <select id="speed-select" style="padding:4px 10px; border-radius:6px; background:#222; color:#fff; border:1px solid #444;">
-        <option value="0.5">0.5x（慢動作）</option>
-        <option value="1" selected>1x（正常）</option>
-        <option value="1.5">1.5x</option>
-        <option value="2">2x</option>
-        <option value="5">5x</option>
-        <option value="10">10x</option>
-        <option value="20">20x（極速）</option>
-        <option value="50">50x</option>
-        <option value="100">100x（飛速）</option>
-      </select>
+    <div class="speed-row" id="speed-row" style="margin-top:6px; display:flex; flex-wrap:wrap; gap:5px; justify-content:center; align-items:center;">
+      <label style="font-size:13px; opacity:0.8;">AI 倍速</label>
+      <input type="hidden" id="speed-select" value="1">
+      <button type="button" class="speed-chip size-btn" data-speed="0.5" title="0.5x（慢動作）">0.5x</button>
+      <button type="button" class="speed-chip size-btn active" data-speed="1" title="1x（正常）">1x</button>
+      <button type="button" class="speed-chip size-btn" data-speed="1.5" title="1.5x">1.5x</button>
+      <button type="button" class="speed-chip size-btn" data-speed="2" title="2x">2x</button>
+      <button type="button" class="speed-chip size-btn" data-speed="5" title="5x">5x</button>
+      <button type="button" class="speed-chip size-btn" data-speed="10" title="10x">10x</button>
+      <button type="button" class="speed-chip size-btn" data-speed="20" title="20x（極速）">20x</button>
+      <button type="button" class="speed-chip size-btn" data-speed="50" title="50x">50x</button>
+      <button type="button" class="speed-chip size-btn" data-speed="100" title="100x（飛速）">100x</button>
     </div>
-    <div id="start-info">版本 <span id="start-version">v7.3.1</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
+    <div id="start-info">版本 <span id="start-version">v7.3.2</span>　最佳時間 <span id="start-best-time">--</span>　成就 <span id="start-ach-count">已解鎖 0/0</span></div>
   </div>
 
   <!-- 勝利畫面 -->
@@ -3222,7 +3221,7 @@ const bossHudEl = document.getElementById('boss-hud');
 const bossBarInnerEl = document.getElementById('boss-bar-inner');
 const buffsHudEl = document.getElementById('buffs-hud');
 // v6.0：版本字串常數——開始畫面版本標籤統一引用此處，避免改版漏改
-const GAME_VERSION = 'v7.3.1';
+const GAME_VERSION = 'v7.3.2';
 // v3.3：傷害方向指示 overlay（JS 建立，紅色弧形暗角依受擊方向轉向）
 const damageDirEl = document.createElement('div');
 damageDirEl.id = 'damage-dir';
@@ -12387,12 +12386,14 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '+' || e.key === '=') {
     const i = SPEED_OPTIONS.indexOf(gameSpeedMult);
     gameSpeedMult = SPEED_OPTIONS[Math.min(SPEED_OPTIONS.length - 1, i + 1)];
+    const ssEl = document.getElementById('speed-select'); if (ssEl) ssEl.value = gameSpeedMult;
     showSpeedToast();
     return;
   }
   if (e.key === '-' || e.key === '_') {
     const i = SPEED_OPTIONS.indexOf(gameSpeedMult);
     gameSpeedMult = SPEED_OPTIONS[Math.max(0, i - 1)];
+    const ssEl = document.getElementById('speed-select'); if (ssEl) ssEl.value = gameSpeedMult;
     showSpeedToast();
     return;
   }
@@ -12878,9 +12879,17 @@ startBtn.addEventListener('click', () => {
 // --- 自動遊玩按鈕 ---
 const autoplayBtn = document.getElementById('autoplay-btn');
 const speedSelect = document.getElementById('speed-select');
-speedSelect.addEventListener('change', () => {
-  gameSpeedMult = parseFloat(speedSelect.value) || 1;
-  if (autoPlay) showSpeedToast();
+function syncSpeedChips() {
+  const cur = parseFloat(speedSelect.value) || 1;
+  document.querySelectorAll('.speed-chip').forEach(b => b.classList.toggle('active', parseFloat(b.dataset.speed) === cur));
+}
+document.querySelectorAll('.speed-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    speedSelect.value = chip.dataset.speed;
+    gameSpeedMult = parseFloat(chip.dataset.speed) || 1;
+    syncSpeedChips();
+    if (autoPlay) showSpeedToast();
+  });
 });
 autoplayBtn.addEventListener('click', () => {
   startScreen.style.display = 'none';
